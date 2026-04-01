@@ -105,7 +105,7 @@ function fetchWeather(cityName) {
 }
 
 function fetchGitHub() {
-  const url = `https://api.github.com/users/${CONFIG.GITHUB_USERNAME}/repos?sort=updated&per_page=8`;
+  const url = `https://api.github.com/users/${CONFIG.GITHUB_USERNAME}/repos?sort=updated&per_page=10`;
   
   fetch(url)
     .then(response => response.json())
