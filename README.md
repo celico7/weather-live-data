@@ -1,115 +1,74 @@
-# Digital Ecosystem - Generative Art
+﻿# 🌦️ Weather & GitHub Live Data - 3D Generative Ecosystem
 
-A 3D interactive web experiment built with p5.js. This project creates a generative digital entity that reacts in real-time to both global weather data (via the Open-Meteo API) and local audio input (microphone).
+A highly interactive 3D web experiment built with **p5.js (WebGL)**. This project creates a generative digital entity that reacts in real-time to global weather data (via the Open-Meteo API), local audio input (microphone via FFT analysis), and your live GitHub repositories!
 
-## Features
+## ✨ Features (New & Upgraded)
 
-*   **Real-time Weather Integration**: 
-    *   Temperature influences the color palette (from cold blues to warm reds) and the base size of the structure.
-    *   Wind speed dictates the rotational speed of the 3D object.
-*   **Timezone-Aware Backgrounds**: The 3D scene background dynamically transitions through dawn, day, dusk, and night gradients. It calculates the exact local time and compares it to the sunrise and sunset times of the selected city.
-*   **Audio Reactivity**: The central 3D geometry pulses and expands in real-time based on live environmental audio captured via the microphone.
-*   **City Selector**: Seamlessly jump between different global locations (e.g., Strasbourg, Tokyo, Los Angeles) to watch the ecosystem instantly adapt to new local weather conditions and timezones.
-*   **GitHub Forest**: An orbital 3D forest representing your recent GitHub repositories! Hover over the trees (trunks or glowing spheres) to see repository details like name, description, size, and recent activity status.
+* **Interactive 3D Camera**: Use your mouse to rotate (drag) and zoom (scroll) around the 3D space.
+* **Audio-Reactive Core**: The central 3D geometry pulses based on live environmental audio. Uses p5.FFT to isolate bass (drives the rotation and tree dancing) and treble (drives the glowing tree leaves).
+* **Live Weather Environment**:
+  * Temperature influences the structural color palette combined with a shiny 3D material.
+  * Real-time weather codes trigger 3D particle systems (Snow ❄️, Rain 🌧️) and display human-readable conditions.
+  * Wind speed dictates the base rotational speed of the core object.
+* **Procedural GitHub Forest 🌳**: 
+  * Your recent GitHub repositories are rendered as procedural 3D fractal trees orbiting the core.
+  * **Tree Anatomy**: Trunk size and fractal branch complexity are mapped to the repository's size! Branch color reflects the programming language.
+  * **Cinematic Focus System**: Hovering over a tree automatically scales it up and illuminates it, while dynamically dimming and shrinking the rest of the forest to focus your attention.
+  * **Clickable Repos**: Click on any focused tree to instantly open its GitHub repository in a new tab.
+  * **Rate-Limit Safe**: Intelligently calculates repo complexity locally to prevent GitHub API rate limits (HTTP 403).
+* **Timezone-Aware Skies**: The 3D background smoothly transitions through dawn, day, dusk, and night gradients based on the exact local time and sunset/sunrise of the selected city.
 
-## Privacy & Data Promise
+## 🔒 Privacy & Data Promise
 
-**No data is recorded, stored, or transmitted.** 
-* The microphone input is processed purely locally in real-time within your browser to animate the 3D shapes.
-* The weather and GitHub data are fetched directly from public APIs to your local machine. Nothing is tracked on any database.
-
-## Technologies Used
-
-*   HTML5 / CSS3
-*   JavaScript (ES6+)
-*   [p5.js](https://p5js.org/) (for WebGL 3D rendering)
-*   [p5.sound](https://p5js.org/reference/#/libraries/p5.sound) (for audio analysis)
-*   [Open-Meteo API](https://open-meteo.com/) (for fetching live weather and geolocation data without API keys)
-
-## Installation & Usage
-
-Due to browser security restrictions regarding microphone access and cross-origin API requests, this project must be run through a local web server.
-
-1.  **Clone the repository**:
-    ```bash
-    git clone <your-repository-url>
-    cd <your-repository-directory>
-    ```
-
-2.  **Run a local server**:
-    You can use tools like VS Code "Live Server" extension, or a simple command line server such as Python's HTTP module:
-    ```bash
-    python -m http.server 8000
-    ```
-
-3.  **Open in your browser**:
-    Navigate to `http://localhost:8000`.
-
-4.  **Interact**:
-    *   Click anywhere on the screen to initialize the Audio Context (required by modern browsers).
-    *   Allow microphone access when prompted.
-    *   Use the drop-down menu in the top left corner to switch between different cities.
-
-## File Structure
-
-*   `index.html`: The main entry point, imports the p5.js libraries and sets up the canvas container.
-*   `sketch.js`: The core logic handling the WebGL rendering, API fetching, timezone math, and audio processing.
+**No personal data is recorded, stored, or transmitted.** 
+* The microphone input is processed purely locally in real-time within your browser (FFT analysis) to animate the 3D shapes. No audio is recorded.
+* The data is fetched directly from public APIs to your local machine. Nothing is tracked on any database.
 
 ---
 
-# Écosystème Numérique - Art Génératif (Version Française)
+# 🌦️ Écosystème Numérique - Art Génératif & Data Live (Version Française)
 
-Une expérience web interactive en 3D construite avec p5.js. Ce projet crée une entité numérique générative qui réagit en temps réel aux données météorologiques mondiales (via l'API Open-Meteo) et au son environnemental local (microphone).
+Une expérience web interactive en 3D construite avec **p5.js (WebGL)**. Ce projet génère un écosystème numérique qui réagit en temps réel à la météo mondiale (Open-Meteo API), au son environnant (microphone avec analyse FFT), et à vos dépôts GitHub !
 
-## Fonctionnalités
+## ✨ Fonctionnalités (Nouvelles & Améliorées)
 
-*   **Intégration Météo en Temps Réel** : 
-    *   La température influence la palette de couleurs (des bleus froids aux rouges chauds) et la taille de base de la structure.
-    *   La vitesse du vent dicte la vitesse de rotation de l'objet 3D.
-*   **Fonds d'écran Adaptatifs (Fuseaux Horaires)** : L'arrière-plan de la scène 3D transite dynamiquement entre l'aube, le jour, le crépuscule et la nuit. Il calcule l'heure locale exacte et la compare aux heures de lever et de coucher du soleil de la ville sélectionnée.
-*   **Réactivité Audio** : La géométrie 3D centrale pulse et s'agrandit en temps réel en fonction du son capté via le microphone.
-*   **Sélecteur de Villes** : Basculez facilement entre différentes villes du monde (ex: Strasbourg, Tokyo, Los Angeles) pour voir l'écosystème s'adapter instantanément à la météo et à l'heure locale.
-*   **Forêt GitHub 3D** : Une forêt orbitale représentant vos dépôts GitHub récents ! Survolez les arbres (les troncs ou les fleurs au sommet) avec votre souris pour afficher une info-bulle contenant le nom du projet, sa description, sa taille et un indicateur de mise à jour récente.
+* **Caméra 3D Interactive** : Cliquez et glissez pour tourner autour de la scène, scrollez pour zoomer.
+* **Noyau Audio-Réactif** : La géométrie 3D centrale pulse en temps réel avec le son. L'analyse p5.FFT isole les basses (qui font danser les arbres et tourner le cube) et les aigus (qui font briller le bout des feuilles).
+* **Environnement Météo en Direct** :
+  * La température modifie la palette de couleurs du cube central (des bleus froids aux rouges chauds).
+  * Le code météo déclenche des particules 3D (Pluie 🌧️, Neige ❄️) qui tombent sur la scène, et affiche un texte lisible (ex: "Nuageux", "Orage").
+  * Le vent influence la vitesse de rotation de l'objet.
+* **Forêt GitHub Procédurale 🌳** : 
+  * Vos dépôts GitHub récents orbitent autour du centre sous forme d'arbres fractals 3D.
+  * **Anatomie des arbres** : La hauteur du tronc et la complexité des branches (fractales) dépendent de la taille du dépôt ! La couleur dépend du langage de programmation.
+  * **Focus Cinématique** : Au survol, l'arbre ciblé grossit et s'illumine, tandis que le reste de la forêt rapetisse et s'assombrit pour un effet de focus ultra-satisfaisant.
+  * **Dépôts Cliquables** : Un clic rapide sur un arbre ouvre directement le dépôt GitHub associé dans un nouvel onglet.
+  * **Anti-Rate Limit** : Le système empêche les erreurs 403 de l'API GitHub en limitant le nombre de requêtes et en calculant la complexité localement.
+* **Ciels Adaptatifs (Fuseaux Horaires)** : Le fond 3D évolue (aube, jour, crépuscule, nuit) selon l'heure locale exacte de la ville choisie.
 
-## Confidentialité & Traitement des Données
+## 🔒 Confidentialité & Traitement des Données
 
 **Aucune donnée n'est enregistrée, conservée ou transmise.**
-* Le flux audio de votre microphone est traité localelement et en temps réel uniquement par votre navigateur pour animer la géométrie 3D.
-* Les données météorologiques et celles de vos dépôts GitHub sont simplement récupérées depuis des API publiques de la machine sans aucun traçage en arrière-plan ni base de données.
+* Le flux audio de votre microphone est analysé localement et en temps réel (FFT) uniquement par votre navigateur pour animer la 3D. Aucun son n'est enregistré.
+* Les données (météo et GitHub) sont récupérées depuis des API publiques directement sur votre machine sans aucun traçage.
 
-## Technologies Utilisées
+## 🚀 Installation & Utilisation
 
-*   HTML5 / CSS3
-*   JavaScript (ES6+)
-*   [p5.js](https://p5js.org/) (pour le rendu 3D WebGL)
-*   [p5.sound](https://p5js.org/reference/#/libraries/p5.sound) (pour l'analyse audio)
-*   [Open-Meteo API](https://open-meteo.com/) (pour les données météo mondiales gratuites sans clé API)
+Ce projet doit être exécuté depuis un serveur web local pour autoriser l'accès au micro et les requêtes API (sécurité standard des navigateurs).
 
-## Installation & Utilisation
+1. **Cloner le dépôt** :
+   \\\ash
+   git clone <votre-url-de-depot>
+   cd <votre-dossier-de-depot>
+   \\\
 
-En raison des restrictions de sécurité des navigateurs (accès au microphone et requêtes API), ce projet doit être exécuté depuis un serveur web local.
+2. **Lancer un serveur local** :
+   Utilisez "Live Server" (VS Code) ou Python :
+   \\\ash
+   python -m http.server 8000
+   \\\
 
-1.  **Cloner le dépôt** :
-    ```bash
-    git clone <votre-url-de-depot>
-    cd <votre-dossier-de-depot>
-    ```
-
-2.  **Lancer un serveur local** :
-    Vous pouvez utiliser des extensions comme "Live Server" sur VS Code, ou une simple commande Python :
-    ```bash
-    python -m http.server 8000
-    ```
-
-3.  **Ouvrir dans le navigateur** :
-    Allez sur `http://localhost:8000`.
-
-4.  **Interagir** :
-    *   Cliquez n'importe où sur l'écran pour initialiser le contexte audio (requis par les navigateurs modernes).
-    *   Autorisez l'accès au microphone lorsque le navigateur vous le demande.
-    *   Utilisez le menu déroulant en haut à gauche pour changer de ville.
-
-## Structure des Fichiers
-
-*   `index.html` : Le point d'entrée principal, importe les bibliothèques p5.js et configure le canvas.
-*   `sketch.js` : La logique principale gérant le rendu WebGL, les appels API, le calcul des fuseaux horaires et le traitement audio.
+3. **Ouvrir dans le navigateur** : \http://localhost:8000\
+4. **Interagir** : 
+   * Cliquez pour initialiser l'audio et autorisez le micro.
+   * Promenez-vous avec la souris dans la forêt 3D !
