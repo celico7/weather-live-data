@@ -1,74 +1,61 @@
-﻿# 🌦️ Weather & GitHub Live Data - 3D Generative Ecosystem
+## Version Française
 
-A highly interactive 3D web experiment built with **p5.js (WebGL)**. This project creates a generative digital entity that reacts in real-time to global weather data (via the Open-Meteo API), local audio input (microphone via FFT analysis), and your live GitHub repositories!
+Digital Ecosystem est une application web 3D interactive et procédurale qui fusionne des données météorologiques en temps réel, une visualisation audio et des statistiques de dépôts GitHub dans une expérience unique et cohérente.
 
-## ✨ Features (New & Upgraded)
+### Fonctionnalités
 
-* **Interactive 3D Camera**: Use your mouse to rotate (drag) and zoom (scroll) around the 3D space.
-* **Audio-Reactive Core**: The central 3D geometry pulses based on live environmental audio. Uses p5.FFT to isolate bass (drives the rotation and tree dancing) and treble (drives the glowing tree leaves).
-* **Live Weather Environment**:
-  * Temperature influences the structural color palette combined with a shiny 3D material.
-  * Real-time weather codes trigger 3D particle systems (Snow ❄️, Rain 🌧️) and display human-readable conditions.
-  * Wind speed dictates the base rotational speed of the core object.
-* **Procedural GitHub Forest 🌳**: 
-  * Your recent GitHub repositories are rendered as procedural 3D fractal trees orbiting the core.
-  * **Tree Anatomy**: Trunk size and fractal branch complexity are mapped to the repository's size! Branch color reflects the programming language.
-  * **Cinematic Focus System**: Hovering over a tree automatically scales it up and illuminates it, while dynamically dimming and shrinking the rest of the forest to focus your attention.
-  * **Clickable Repos**: Click on any focused tree to instantly open its GitHub repository in a new tab.
-  * **Rate-Limit Safe**: Intelligently calculates repo complexity locally to prevent GitHub API rate limits (HTTP 403).
-* **Timezone-Aware Skies**: The 3D background smoothly transitions through dawn, day, dusk, and night gradients based on the exact local time and sunset/sunrise of the selected city.
+*   **Environnement 3D Procédural** : Génère une forêt 3D où chaque arbre représente un dépôt GitHub. La taille, la complexité et la couleur des arbres sont déterminées par la taille du dépôt et son langage de programmation principal.
+*   **Intégration Météo en Temps Réel** : Se connecte à l'API Open-Meteo pour récupérer les données météorologiques en temps réel pour les villes sélectionnées. Le dégradé d'arrière-plan et les effets de particules (pluie, neige) s'adaptent dynamiquement aux conditions météorologiques actuelles et à l'heure locale de la ville sélectionnée.
+*   **Réactivité Audio** : Utilise le microphone de l'appareil pour analyser l'entrée audio (basses et aiguës) en temps réel. L'objet 3D central palpite au rythme des basses, tandis que les branches des arbres réagissent aux fréquences aiguës. Un analyseur spectral est également affiché dans l'interface utilisateur.
+*   **Gestion des Villes** : Les utilisateurs peuvent rechercher et ajouter de nouvelles villes du monde entier, et supprimer celles existantes. L'application affiche l'heure locale, la température, la description de la météo et le nom du pays.
+*   **Personnalisation** : Les utilisateurs peuvent téléverser un avatar personnalisé et choisir une couleur de thème qui met à jour les éléments de l'interface (bordures, texte, dégradés).
+*   **Persistance des Données Locales** : Les préférences de l'utilisateur, y compris le thème sélectionné, l'avatar et les villes gérées, sont automatiquement sauvegardées dans le stockage local du navigateur.
 
-## 🔒 Privacy & Data Promise
+### Technologies Utilisées
 
-**No personal data is recorded, stored, or transmitted.** 
-* The microphone input is processed purely locally in real-time within your browser (FFT analysis) to animate the 3D shapes. No audio is recorded.
-* The data is fetched directly from public APIs to your local machine. Nothing is tracked on any database.
+*   **React** : Pour la construction de l'interface utilisateur et la gestion de l'état de l'application.
+*   **p5.js** : Pour le rendu du canevas 3D WebGL, la génération procédurale et l'analyse audio.
+*   **Tailwind CSS** : Pour le style de l'interface utilisateur avec des classes utilitaires.
+*   **Lucide React** : Pour les icônes vectorielles.
+*   **API Open-Meteo** : Pour la récupération des données de géocodage et de prévisions météorologiques.
+*   **API GitHub** : Pour la récupération des données des dépôts utilisateurs.
+
+### Configuration et Installation
+
+1.  Clonez le dépôt.
+2.  Installez les dépendances en utilisant `npm install`.
+3.  Démarrez le serveur de développement en utilisant `npm run dev`.
+4.  Ouvrez l'application dans votre navigateur. Remarque : L'accès au microphone doit être autorisé pour que les fonctionnalités de réactivité audio fonctionnent.
 
 ---
 
-# 🌦️ Écosystème Numérique - Art Génératif & Data Live (Version Française)
+# Digital Ecosystem
 
-Une expérience web interactive en 3D construite avec **p5.js (WebGL)**. Ce projet génère un écosystème numérique qui réagit en temps réel à la météo mondiale (Open-Meteo API), au son environnant (microphone avec analyse FFT), et à vos dépôts GitHub !
+## English Version
 
-## ✨ Fonctionnalités (Nouvelles & Améliorées)
+Digital Ecosystem is an interactive, procedural 3D web application that merges real-time weather data, audio visualization, and GitHub repository statistics into a single, cohesive experience.
 
-* **Caméra 3D Interactive** : Cliquez et glissez pour tourner autour de la scène, scrollez pour zoomer.
-* **Noyau Audio-Réactif** : La géométrie 3D centrale pulse en temps réel avec le son. L'analyse p5.FFT isole les basses (qui font danser les arbres et tourner le cube) et les aigus (qui font briller le bout des feuilles).
-* **Environnement Météo en Direct** :
-  * La température modifie la palette de couleurs du cube central (des bleus froids aux rouges chauds).
-  * Le code météo déclenche des particules 3D (Pluie 🌧️, Neige ❄️) qui tombent sur la scène, et affiche un texte lisible (ex: "Nuageux", "Orage").
-  * Le vent influence la vitesse de rotation de l'objet.
-* **Forêt GitHub Procédurale 🌳** : 
-  * Vos dépôts GitHub récents orbitent autour du centre sous forme d'arbres fractals 3D.
-  * **Anatomie des arbres** : La hauteur du tronc et la complexité des branches (fractales) dépendent de la taille du dépôt ! La couleur dépend du langage de programmation.
-  * **Focus Cinématique** : Au survol, l'arbre ciblé grossit et s'illumine, tandis que le reste de la forêt rapetisse et s'assombrit pour un effet de focus ultra-satisfaisant.
-  * **Dépôts Cliquables** : Un clic rapide sur un arbre ouvre directement le dépôt GitHub associé dans un nouvel onglet.
-  * **Anti-Rate Limit** : Le système empêche les erreurs 403 de l'API GitHub en limitant le nombre de requêtes et en calculant la complexité localement.
-* **Ciels Adaptatifs (Fuseaux Horaires)** : Le fond 3D évolue (aube, jour, crépuscule, nuit) selon l'heure locale exacte de la ville choisie.
+### Features
 
-## 🔒 Confidentialité & Traitement des Données
+*   **Procedural 3D Environment**: Generates a 3D forest where each tree represents a GitHub repository. The size, complexity, and color of the trees are determined by the repository's size and primary programming language.
+*   **Real-Time Weather Integration**: Connects to the Open-Meteo API to fetch real-time weather data for selected cities. The background gradient and particle effects (rain, snow) dynamically adapt to the current weather conditions and local time of the selected city.
+*   **Audio Reactivity**: Uses the device's microphone to analyze audio input (bass and treble) in real-time. The central 3D object pulses to the bass, while the tree branches react to treble frequencies. A spectral analyzer is also displayed in the UI.
+*   **City Management**: Users can search for and add new cities worldwide, and remove existing ones. The application displays the local time, temperature, weather description, and country name.
+*   **Personalization**: Users can upload a custom avatar and choose a theme color that updates the UI elements (borders, text, gradients).
+*   **Local Storage Persistence**: User preferences, including the selected theme, avatar, and managed cities, are automatically saved in the browser's local storage.
 
-**Aucune donnée n'est enregistrée, conservée ou transmise.**
-* Le flux audio de votre microphone est analysé localement et en temps réel (FFT) uniquement par votre navigateur pour animer la 3D. Aucun son n'est enregistré.
-* Les données (météo et GitHub) sont récupérées depuis des API publiques directement sur votre machine sans aucun traçage.
+### Technologies Used
 
-## 🚀 Installation & Utilisation
+*   **React**: For building the user interface and managing application state.
+*   **p5.js**: For rendering the 3D WebGL canvas, procedural generation, and audio analysis.
+*   **Tailwind CSS**: For styling the user interface with utility classes.
+*   **Lucide React**: For scalable vector icons.
+*   **Open-Meteo API**: For fetching geocoding and weather forecast data.
+*   **GitHub API**: For fetching user repository data.
 
-Ce projet doit être exécuté depuis un serveur web local pour autoriser l'accès au micro et les requêtes API (sécurité standard des navigateurs).
+### Setup and Installation
 
-1. **Cloner le dépôt** :
-   \\\ash
-   git clone <votre-url-de-depot>
-   cd <votre-dossier-de-depot>
-   \\\
-
-2. **Lancer un serveur local** :
-   Utilisez "Live Server" (VS Code) ou Python :
-   \\\ash
-   python -m http.server 8000
-   \\\
-
-3. **Ouvrir dans le navigateur** : \http://localhost:8000\
-4. **Interagir** : 
-   * Cliquez pour initialiser l'audio et autorisez le micro.
-   * Promenez-vous avec la souris dans la forêt 3D !
+1.  Clone the repository.
+2.  Install dependencies using `npm install`.
+3.  Start the development server using `npm run dev`.
+4.  Open the application in your browser. Note: Microphone access must be granted for the audio reactivity features to work.

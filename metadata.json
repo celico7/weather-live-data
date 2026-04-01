@@ -1,0 +1,5 @@
+{
+  "name": "Digital Ecosystem",
+  "description": "Entité numérique générative 3D réagissant à la météo, au son et à GitHub.",
+  "requestFramePermissions": ["microphone"]
+}
