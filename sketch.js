@@ -3,13 +3,14 @@
 // ============================================================================
 
 const CONFIG = {
-  GITHUB_USERNAME: "celico7", // pseudo github ici
+  GITHUB_USERNAME: "celico7", // pseudo github
   BASE_RADIUS_MIN: 80,
   BASE_RADIUS_MAX: 200,
   AUDIO_PULSE_MAX: 150,
   ROTATION_SPEED_MIN: 0.2,
   ROTATION_SPEED_MAX: 3.0,
   FOREST_RADIUS: 300,
+  MAX_BRANCHES: 15,
 };
 
 const CITIES_DATA = {
@@ -22,21 +23,33 @@ const CITIES_DATA = {
   "Los Angeles": { lat: 34.05, lon: -118.25 },
 };
 
+const LANG_COLORS = {
+  "JavaScript": [241, 224, 90],
+  "TypeScript": [49, 120, 198],
+  "Python": [53, 114, 165],
+  "HTML": [227, 76, 38],
+  "CSS": [86, 61, 124],
+  "Java": [176, 114, 25],
+  "default": [150, 255, 150]
+};
+
 // ============================================================================
 // VARIABLES D'ÉTAT GLOBALES
 // ============================================================================
 
 let state = {
   weatherData: null,
-  temperature: 15, // Valeur par défaut pour éviter l'écran noir
+  temperature: 15,
   windSpeed: 5,
-  sunriseTime: 360, // 6h00 par défaut
-  sunsetTime: 1200, // 20h00 par défaut
+  weatherCode: 0,
+  sunriseTime: 360,
+  sunsetTime: 1200,
   githubRepos: [],
   currentCity: "Strasbourg",
   hoveredRepo: null,
   angle: 0,
   volume: 0,
+  particles: []
 };
 
 let domElements = {
@@ -46,6 +59,7 @@ let domElements = {
 };
 
 let mic;
+let fft;
 
 // ============================================================================
 // 1. CYCLE DE VIE P5.JS
@@ -58,20 +72,37 @@ function setup() {
 
   mic = new p5.AudioIn();
   mic.start();
+  fft = new p5.FFT();
+  fft.setInput(mic);
 
   setupUI();
 
   fetchWeather(state.currentCity);
   fetchGitHub();
+  
+  // Générer des particules pour la météo
+  for(let i=0; i<300; i++) {
+    state.particles.push({
+      x: random(-width, width),
+      y: random(-height, height),
+      z: random(-800, 800),
+      speedY: random(5, 15),
+      speedX: random(-2, 2)
+    });
+  }
 }
 
 function draw() {
   background(0);
   
+  // Contrôle de caméra (click droit / gauche / molette)
+  orbitControl();
+  
   draw3DBackground();
   updateAudioAndAngle();
   setupLighting();
   
+  drawWeatherParticles();
   drawGitHubForest();
   drawCentralObject();
   
@@ -93,6 +124,7 @@ function fetchWeather(cityName) {
       if (data.current_weather) {
         state.temperature = data.current_weather.temperature;
         state.windSpeed = data.current_weather.windspeed;
+        state.weatherCode = data.current_weather.weathercode;
       }
       if (data.daily && data.daily.sunrise && data.daily.sunset) {
         const srStr = data.daily.sunrise[0];
@@ -112,12 +144,30 @@ function fetchGitHub() {
     .then(data => {
       if (Array.isArray(data)) {
         state.githubRepos = data;
+        // Pour éviter de dépasser la limite d'API GitHub (Rate Limit de 60 requêtes par heure),
+        // on ne fait plus de requête pour chercher le compte exact de chaque commit.
+        // On calcule plutôt une complexité (qui servira de commitCount pour l'arbre)
+        // basée sur la "size" du dépôt, qui est toujours disponible dans cette première requête !
+        state.githubRepos.forEach((repo) => {
+          // Un petit repo aura 1 à 2 branches. Un gros de 10 à 50 branches.
+          repo.commitCount = map(repo.size, 0, 5000, 1, 50, true);
+        });
       } else {
-        console.error("Erreur GitHub (Pseudo introuvable ?) :", data);
+        console.error("Erreur GitHub (Rate Limit probable) :", data);
+        // Si l'API est bloquée (Rate Limit dépassé), on met des fausses données pour ne pas casser le site
+        state.githubRepos = [
+          { name: "Projet_Simulé_1", size: 1000, pushed_at: new Date().toISOString(), language: "JavaScript", commitCount: 30, description: "Données locales temporaires", html_url: "https://github.com" },
+          { name: "Projet_Simulé_2", size: 250, pushed_at: new Date().toISOString(), language: "Python", commitCount: 15, description: "Limite d'API GitHub atteinte", html_url: "https://github.com" },
+          { name: "Projet_Simulé_3", size: 50, pushed_at: new Date().toISOString(), language: "HTML", commitCount: 4, description: "Revenez dans une heure", html_url: "https://github.com" }
+        ];
       }
     })
-    .catch(err => console.error("Erreur réseau GitHub:", err));
+    .catch(err => {
+      console.error("Erreur réseau GitHub:", err);
+    });
 }
+
+// Ancienne fonction fetchRepoCommits supprimée pour préserver le Rate Limit de l'API GitHub
 
 function changeCity() {
   state.currentCity = domElements.citySelect.value();
@@ -164,6 +214,16 @@ function setupUI() {
   domElements.tooltipDiv.style('z-index', '100');
 }
 
+function getWeatherDescription(code) {
+  if (code === 0) return "Ciel dégagé ☀️";
+  if (code >= 1 && code <= 3) return "Nuageux ☁️";
+  if (code >= 45 && code <= 48) return "Brouillard 🌫️";
+  if (code >= 51 && code <= 67) return "Pluie 🌧️";
+  if (code >= 71 && code <= 86) return "Neige ❄️";
+  if (code >= 95) return "Orage ⛈️";
+  return "Variable";
+}
+
 function updateUI() {
   let cityTimeStr = "--h--";
   if (state.weatherData && state.weatherData.utc_offset_seconds !== undefined) {
@@ -172,14 +232,18 @@ function updateUI() {
   }
 
   const act = mic.getLevel() > 0.01 ? "Actif" : "en attente";
-  domElements.uiText.html(`📍 ${state.currentCity} | Heure: ${cityTimeStr} | Temp: ${state.temperature}°C | Vent: ${state.windSpeed}km/h | Son: ${act}`);
+  const weatherDesc = getWeatherDescription(state.weatherCode);
+  
+  domElements.uiText.html(`📍 ${state.currentCity} | Heure: ${cityTimeStr} | Temp: ${state.temperature}°C | Vent: ${state.windSpeed}km/h | Météo: ${weatherDesc} | Son: ${act}`);
 
   if (state.hoveredRepo) {
     domElements.tooltipDiv.html(`
       <strong>${state.hoveredRepo.name}</strong><br>
       <em>${state.hoveredRepo.desc}</em><br>
-      Taille: ${state.hoveredRepo.size} KB<br>
-      ${state.hoveredRepo.isRecent ? "🟢 Récent (< 2j)" : "⚪ Ancien (> 2j)"}
+      Langage: ${state.hoveredRepo.language || 'Mixte'}<br>
+      Commits: ${state.hoveredRepo.commitCount || '...'} branches<br>
+      ${state.hoveredRepo.isRecent ? "🟢 Récent (< 2j)" : "⚪ Ancien (> 2j)"}<br>
+      <em>(Clic-gauche pour ouvrir sur GitHub)</em>
     `);
     domElements.tooltipDiv.position(mouseX + 15, mouseY + 15); 
     domElements.tooltipDiv.style('display', 'block');
@@ -192,16 +256,60 @@ function updateUI() {
 // 4. MOTEUR 3D
 // ============================================================================
 
+function drawWeatherParticles() {
+  if (!state.weatherData) return;
+  // Neiger: code > 70. Pluie: code entre 50 et 70. 
+  let isRain = state.weatherCode >= 50 && state.weatherCode <= 69;
+  let isSnow = state.weatherCode >= 70 && state.weatherCode <= 86;
+  
+  if (!isRain && !isSnow) return; // Beau temps
+
+  push();
+  noStroke();
+  fill(255, 255, 255, isSnow ? 0.8 : 0.4);
+  
+  for (let p of state.particles) {
+    p.y += p.speedY + (state.windSpeed / 10);
+    p.x += state.windSpeed; 
+
+    // Box pour pluie (étiré), sphere pour neige
+    push();
+    translate(p.x, p.y, p.z);
+    if(isRain) box(1, 15, 1);
+    else sphere(3);
+    pop();
+
+    // Reset particules
+    if (p.y > height) {
+      p.y = -height;
+      p.x = random(-width, width);
+    }
+    if (p.x > width) {
+      p.x = -width;
+    }
+  }
+  pop();
+}
+
 function updateAudioAndAngle() {
+  let spectrum = fft.analyze(); // Analyse spectrale (0-255 sur 1024 fréquences)
+  let bass = fft.getEnergy("bass"); // 0 à 255
+  let treble = fft.getEnergy("treble");
+
   const rawVolume = mic.getLevel();
   state.volume = lerp(state.volume, rawVolume, 0.1); 
+  state.bassForce = lerp(state.bassForce || 0, bass, 0.1);
+  state.trebleForce = lerp(state.trebleForce || 0, treble, 0.1);
+
   const rotationSpeed = map(state.windSpeed, 0, 50, CONFIG.ROTATION_SPEED_MIN, CONFIG.ROTATION_SPEED_MAX); 
   state.angle += rotationSpeed;
 }
 
 function setupLighting() {
-  ambientLight(180);
+  ambientLight(50);
   directionalLight(255, 255, 255, 0.5, 0.5, -1);
+  // Ajoute une lueur magenta
+  pointLight(255, 50, 150, 0, 0, 200);
 }
 
 function drawCentralObject() {
@@ -212,7 +320,8 @@ function drawCentralObject() {
   const objColor = lerpColor(coldColor, warmColor, tempAmt);
   
   const baseRadius = map(state.temperature, -5, 35, CONFIG.BASE_RADIUS_MIN, CONFIG.BASE_RADIUS_MAX); 
-  const audioPulse = map(state.volume, 0, 0.15, 0, CONFIG.AUDIO_PULSE_MAX); 
+  // Pulse sur le BPM (les Basses de la chanson ou voix)
+  const audioPulse = map(state.bassForce, 0, 255, 0, CONFIG.AUDIO_PULSE_MAX); 
   const finalSize = baseRadius + audioPulse;
 
   push();
@@ -220,10 +329,60 @@ function drawCentralObject() {
   rotateY(state.angle);
   
   fill(objColor);
-  stroke(255, 255, 255, 0.3); 
+  specularMaterial(255); 
+  shininess(50); // Rendre brillant (WebGL)
+
+  stroke(255, 255, 255, 0.5); 
   strokeWeight(1);
   box(finalSize); 
   pop();
+}
+
+function recursiveBranch(len, depth, maxDepth, langColor, windOffset = 0) {
+  // Dégradé : la base est sombre, les extrémités sont lumineuses
+  let colorMult = map(depth, 0, maxDepth, 1.2, 0.5);
+  ambientMaterial(min(langColor[0]*colorMult, 255), min(langColor[1]*colorMult, 255), min(langColor[2]*colorMult, 255));
+  
+  // Tronc/Branche qui s'affine vers le haut avec le depth
+  let diam = map(depth, 0, maxDepth, 1, 8);
+  
+  push();
+  translate(0, -len/2, 0);
+  cylinder(diam, len, 8, 1);
+  pop();
+  
+  translate(0, -len, 0);
+  
+  if (depth > 0) {
+    // Vent doux et organique (basé sur le temps et l'offset unique de l'arbre)
+    let wind = sin(frameCount * 0.03 + windOffset + depth) * 8;
+    let angleShift = 25 + (state.bassForce * 0.15) + wind; 
+    
+    // Branche 1
+    push();
+    rotateZ(angleShift);
+    rotateY(frameCount * 0.3 + windOffset);
+    recursiveBranch(len * 0.7, depth - 1, maxDepth, langColor, windOffset);
+    pop();
+
+    // Branche 2 (Légèrement asymétrique pour un rendu plus naturel)
+    push();
+    rotateZ(-angleShift * 0.8);
+    rotateX(-15 + wind * 0.3);
+    rotateY(-frameCount * 0.3 - windOffset);
+    recursiveBranch(len * 0.75, depth - 1, maxDepth, langColor, windOffset);
+    pop();
+  } else {
+    // Bout des feuilles élégantes
+    noStroke();
+    let beatAigu = map(state.trebleForce, 0, 255, 3, 14); 
+    // Émission lumineuse sur les feuilles au bout
+    emissiveMaterial(langColor[0], langColor[1], langColor[2]);
+    push();
+    scale(1, 1.5, 1); // Étire la sphère pour lui donner une forme de goutte/feuille
+    sphere(beatAigu, 8, 8);
+    pop();
+  }
 }
 
 function drawGitHubForest() {
@@ -263,11 +422,18 @@ function drawGitHubForest() {
     const syFlower = (-h) * perspective + height / 2; // Y de la fleur
     const syTrunk = (-h / 2) * perspective + height / 2; // Y du centre du tronc
 
-    // L'arbre est-il le plus proche et face à nous ? (gz > 0 signifie qu'il est "devant")
-    // On calcule la distance en 2D classique
+    // Hitbox BEAUCOUP plus permissive pour attraper facilement les petits arbres
     let isHover = false;
-    if (dist(mouseX, mouseY, sx, syFlower) < 40 * perspective || dist(mouseX, mouseY, sx, syTrunk) < (h / 2 * perspective + 20)) {
-        isHover = true;
+    // On impose un rayon minimum très large (50px-60px) pour que même un petit arbre lointain soit facile à survoler
+    let radiusFeuilles = max(60, 60 * perspective); 
+    let radiusTronc = max(60, (h / 2 * perspective) + 40);
+    
+    // L'arbre doit être devant l'observateur (gz > -cameraZ)
+    if (gz > -300) {
+      // On teste si la souris est globalement aux alentours de l'arbre
+      if (dist(mouseX, mouseY, sx, syFlower) < radiusFeuilles || dist(mouseX, mouseY, sx, syTrunk) < radiusTronc) {
+          isHover = true;
+      }
     }
 
     const pushDate = new Date(repo.pushed_at);
@@ -279,38 +445,53 @@ function drawGitHubForest() {
         name: repo.name,
         size: repo.size,
         isRecent: isRecent,
-        desc: repo.description || "Aucune description"
+        desc: repo.description || "Aucune description",
+        html_url: repo.html_url
       };
     }
     
-    // Dessin Tronc
+    // Le tronc classique est remplacé par une vraie génération procédurale fractale d'arbres 3D
     push();
-    translate(0, -h / 2, 0);
-    if (isHover) {
-      fill(150, 255, 150, 0.9);
-      strokeWeight(2);
-    } else {
-      fill(100, 255, 100, 0.5);
-      strokeWeight(1);
-    }
-    stroke(255);
-    box(20, h, 20);
-    pop();
     
-    // Dessin Fleur
+    // Positionne la base de l'arbre
+    let baseL = min(repo.size, 150); // Hauteur du tronc
+    let cCount = repo.commitCount || 1;
+    let bDepth = min(floor(map(cCount, 1, 50, 1, 5)), CONFIG.MAX_BRANCHES);
+    let langCol = LANG_COLORS[repo.language] || LANG_COLORS["default"];
+
+    // ===== NOUVEAU SYSTÈME DE FOCUS DYNAMIQUE =====
+    let targetScale = 1.0;
+    if (state.hoveredRepo) { 
+      // Si N'IMPORTE QUEL arbre est survolé
+      if (state.hoveredRepo.name === repo.name) {
+        // L'arbre actuel est celui survolé : Focus !
+        targetScale = 1.5; 
+        ambientLight(255); // Le fait briller
+        // langCol = [langCol[0]*1.5, langCol[1]*1.5, langCol[2]*1.5]; // Couleurs plus vives
+      } else {
+        // Les autres arbres disparaissent / s'assombrissent en fond
+        targetScale = 0.4; 
+        langCol = [langCol[0]*0.2, langCol[1]*0.2, langCol[2]*0.2];
+      }
+    } else {
+      // Aucun arbre survolé : Légère "respiration" organique pour la forêt
+      targetScale = 1.0 + sin(frameCount * 0.05 + i) * 0.08; 
+    }
+    
+    // Lerp (interpolation) pour une animation de taille ultra fluide
+    repo.currentScale = repo.currentScale || 1.0;
+    repo.currentScale = lerp(repo.currentScale, targetScale, 0.1);
+    
     push();
-    translate(0, -h, 0);
-    noStroke();
+    scale(repo.currentScale);
     
-    if (isRecent) {
-      fill(255, 20, 147);
-      sphere(isHover ? 30 : 15);
-    } else {
-      fill(0, 150, 0);
-      sphere(isHover ? 15 : 5);
-    }
-    pop(); 
-    pop(); 
+    // Génère l'arbre ! (Avec effet de vent unique)
+    recursiveBranch(baseL, bDepth, bDepth, langCol, i * 45);
+
+    pop(); // Fin scale focus
+    pop(); // Fin translate position arbre
+    
+    pop(); // Fin de la rotation offset Z / radius
   }
   pop(); 
   
@@ -375,8 +556,20 @@ function draw3DBackground() {
 // 6. GESTION DES ÉVÉNEMENTS NAVIGATEUR
 // ============================================================================
 
+let clickStartTime = 0;
+
 function mousePressed() {
   userStartAudio(); 
+  clickStartTime = millis(); 
+}
+
+function mouseReleased() {
+  // Ouvre le lien uniquement si le clic était rapide (différent d'un drag orbitControl)
+  if (millis() - clickStartTime < 300) {
+    if (state.hoveredRepo && state.hoveredRepo.html_url) {
+      window.open(state.hoveredRepo.html_url, '_blank');
+    }
+  }
 }
 
 function windowResized() {
