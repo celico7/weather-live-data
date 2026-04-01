@@ -3,7 +3,7 @@
 // ============================================================================
 
 const CONFIG = {
-  GITHUB_USERNAME: "celico7", //votre pseudo ici
+  GITHUB_USERNAME: "celico7", // pseudo github ici
   BASE_RADIUS_MIN: 80,
   BASE_RADIUS_MAX: 200,
   AUDIO_PULSE_MAX: 150,
@@ -28,10 +28,10 @@ const CITIES_DATA = {
 
 let state = {
   weatherData: null,
-  temperature: 0,
-  windSpeed: 0,
-  sunriseTime: 0,
-  sunsetTime: 0,
+  temperature: 15, // Valeur par défaut pour éviter l'écran noir
+  windSpeed: 5,
+  sunriseTime: 360, // 6h00 par défaut
+  sunsetTime: 1200, // 20h00 par défaut
   githubRepos: [],
   currentCity: "Strasbourg",
   hoveredRepo: null,
@@ -51,72 +51,72 @@ let mic;
 // 1. CYCLE DE VIE P5.JS
 // ============================================================================
 
-function preload() {
-  fetchWeather(state.currentCity);
-  fetchGitHub();
-}
-
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
   angleMode(DEGREES);
   colorMode(RGB, 255, 255, 255, 1);
 
-  // Initialisation de l'audio
   mic = new p5.AudioIn();
   mic.start();
 
-  // Création dynamique de l'interface
   setupUI();
+
+  fetchWeather(state.currentCity);
+  fetchGitHub();
 }
 
 function draw() {
   background(0);
   
-  // 1. Fond d'écran
   draw3DBackground();
-
-  // 2. Mise à jour de la physique et des lumières
   updateAudioAndAngle();
   setupLighting();
-
-  // 3. Forêt (les cercles extérieurs)
+  
   drawGitHubForest();
-
-  // 4. Objet principal
   drawCentralObject();
-
-  // 5. Interface
+  
   updateUI();
 }
 
 // ============================================================================
-// 2. RÉCUPÉRATION DES DONNÉES (API)
+// 2. RÉCUPÉRATION DES DONNÉES (API) avec FETCH
 // ============================================================================
 
 function fetchWeather(cityName) {
   const coords = CITIES_DATA[cityName];
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current_weather=true&daily=sunrise,sunset&timezone=auto`;
   
-  loadJSON(url, (data) => {
-    state.weatherData = data;
-    if (data && data.current_weather) {
-      state.temperature = data.current_weather.temperature;
-      state.windSpeed = data.current_weather.windspeed;
-
-      // Conversion des heures string "YYYY-MM-DDTHH:MM" en "minutes depuis minuit"
-      const srStr = data.daily.sunrise[0];
-      const ssStr = data.daily.sunset[0];
-      state.sunriseTime = parseInt(srStr.substring(11, 13)) * 60 + parseInt(srStr.substring(14, 16));
-      state.sunsetTime = parseInt(ssStr.substring(11, 13)) * 60 + parseInt(ssStr.substring(14, 16));
-    }
-  });
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      state.weatherData = data;
+      if (data.current_weather) {
+        state.temperature = data.current_weather.temperature;
+        state.windSpeed = data.current_weather.windspeed;
+      }
+      if (data.daily && data.daily.sunrise && data.daily.sunset) {
+        const srStr = data.daily.sunrise[0];
+        const ssStr = data.daily.sunset[0];
+        state.sunriseTime = parseInt(srStr.substring(11, 13)) * 60 + parseInt(srStr.substring(14, 16));
+        state.sunsetTime = parseInt(ssStr.substring(11, 13)) * 60 + parseInt(ssStr.substring(14, 16));
+      }
+    })
+    .catch(err => console.error("Erreur Météo:", err));
 }
 
 function fetchGitHub() {
   const url = `https://api.github.com/users/${CONFIG.GITHUB_USERNAME}/repos?sort=updated&per_page=8`;
-  loadJSON(url, (data) => {
-    state.githubRepos = data;
-  });
+  
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (Array.isArray(data)) {
+        state.githubRepos = data;
+      } else {
+        console.error("Erreur GitHub (Pseudo introuvable ?) :", data);
+      }
+    })
+    .catch(err => console.error("Erreur réseau GitHub:", err));
 }
 
 function changeCity() {
@@ -129,7 +129,6 @@ function changeCity() {
 // ============================================================================
 
 function setupUI() {
-  // Sélecteur de ville
   domElements.citySelect = createSelect();
   domElements.citySelect.position(20, 20);
   domElements.citySelect.style('background-color', 'rgba(20, 20, 30, 0.8)');
@@ -144,7 +143,6 @@ function setupUI() {
   }
   domElements.citySelect.changed(changeCity);
 
-  // Texte du pied de page
   domElements.uiText = createDiv('');
   domElements.uiText.position(20, windowHeight - 40);
   domElements.uiText.style('color', 'white');
@@ -152,7 +150,6 @@ function setupUI() {
   domElements.uiText.style('font-size', '16px');
   domElements.uiText.style('text-shadow', '1px 1px 2px black');
 
-  // Info-bulle pour Github
   domElements.tooltipDiv = createDiv('');
   domElements.tooltipDiv.style('position', 'absolute');
   domElements.tooltipDiv.style('background', 'rgba(0, 0, 0, 0.8)');
@@ -161,13 +158,12 @@ function setupUI() {
   domElements.tooltipDiv.style('border-radius', '5px');
   domElements.tooltipDiv.style('font-family', 'sans-serif');
   domElements.tooltipDiv.style('font-size', '14px');
-  domElements.tooltipDiv.style('pointer-events', 'none'); // Ne bloque pas les clics
+  domElements.tooltipDiv.style('pointer-events', 'none'); 
   domElements.tooltipDiv.style('display', 'none');
   domElements.tooltipDiv.style('z-index', '100');
 }
 
 function updateUI() {
-  // Mise à jour des informations de barre de status
   let cityTimeStr = "--h--";
   if (state.weatherData && state.weatherData.utc_offset_seconds !== undefined) {
     let cityTimeObj = new Date(Date.now() + (state.weatherData.utc_offset_seconds * 1000));
@@ -177,16 +173,13 @@ function updateUI() {
   const act = mic.getLevel() > 0.01 ? "Actif" : "Attente";
   domElements.uiText.html(`📍 ${state.currentCity} | Heure: ${cityTimeStr} | Temp: ${state.temperature}°C | Vent: ${state.windSpeed}km/h | Son: ${act}`);
 
-  // Affichage du Tooltip Github
   if (state.hoveredRepo) {
-    // Si la distance est détectée, activer l'info bulle et mettre à jour la position
     domElements.tooltipDiv.html(`
       <strong>${state.hoveredRepo.name}</strong><br>
       <em>${state.hoveredRepo.desc}</em><br>
       Taille: ${state.hoveredRepo.size} KB<br>
-      ${state.hoveredRepo.isRecent ? "Récent (< 2j)" : "Ancien (> 2j)"}
+      ${state.hoveredRepo.isRecent ? "🟢 Récent (< 2j)" : "⚪ Ancien (> 2j)"}
     `);
-    
     domElements.tooltipDiv.position(mouseX + 15, mouseY + 15); 
     domElements.tooltipDiv.style('display', 'block');
   } else {
@@ -199,11 +192,8 @@ function updateUI() {
 // ============================================================================
 
 function updateAudioAndAngle() {
-  // Lissage du volume
   const rawVolume = mic.getLevel();
   state.volume = lerp(state.volume, rawVolume, 0.1); 
-
-  // Mapping de la vitesse du vent vers de la rotation
   const rotationSpeed = map(state.windSpeed, 0, 50, CONFIG.ROTATION_SPEED_MIN, CONFIG.ROTATION_SPEED_MAX); 
   state.angle += rotationSpeed;
 }
@@ -217,7 +207,6 @@ function drawCentralObject() {
   const warmColor = color(255, 50, 50);
   const coldColor = color(50, 150, 255);
   
-  // Mix entre couleurs
   const tempAmt = constrain(map(state.temperature, -5, 35, 0, 1), 0, 1);
   const objColor = lerpColor(coldColor, warmColor, tempAmt);
   
@@ -232,7 +221,6 @@ function drawCentralObject() {
   fill(objColor);
   stroke(255, 255, 255, 0.3); 
   strokeWeight(1);
-  
   box(finalSize); 
   pop();
 }
@@ -257,20 +245,30 @@ function drawGitHubForest() {
     push();
     translate(x, 0, z);
     
-    // Logique HOVER via la projection d'écran (screenX / Y)
-    const sx = screenX(0, -h, 0); 
-    const sy = screenY(0, -h, 0);
-    const stx = screenX(0, -h/2, 0);
-    const sty = screenY(0, -h/2, 0);
+    // --- Calcul Manuel de la Projection 3D vers 2D pour le survol ---
+    // (Remplace 'screenX' qui n'est pas supporté sur toutes les versions de p5.js)
+    
+    // Application de la rotation de la forêt pour obtenir la position globale X et Z
+    const gx = x * cos(forestRotationY) + z * sin(forestRotationY);
+    const gz = -x * sin(forestRotationY) + z * cos(forestRotationY);
+    
+    // Calcul de la perspective WebGL standard (Caméra par défaut)
+    const fov = 60 * PI / 180;
+    const cameraZ = (height / 2.0) / tan(fov / 2.0);
+    const perspective = cameraZ / (cameraZ - gz);
 
-    // Ajustement de l'origine (p5.js screenX de webgl va de 0 à width ou -width/2... 
-    // Sur des versions récentes dist(mouseX, mouseY) est robuste car screenX renvoie bien le pixel absolu)
+    // Coordonnées projetées sur l'écran en 2D
+    const sx = gx * perspective + width / 2; 
+    const syFlower = (-h) * perspective + height / 2; // Y de la fleur
+    const syTrunk = (-h / 2) * perspective + height / 2; // Y du centre du tronc
+
+    // L'arbre est-il le plus proche et face à nous ? (gz > 0 signifie qu'il est "devant")
+    // On calcule la distance en 2D classique
     let isHover = false;
-    if(dist(mouseX, mouseY, sx, sy) < 40 || dist(mouseX, mouseY, stx, sty) < (h/2 + 20)) {
+    if (dist(mouseX, mouseY, sx, syFlower) < 40 * perspective || dist(mouseX, mouseY, sx, syTrunk) < (h / 2 * perspective + 20)) {
         isHover = true;
     }
 
-    // Condition de dates
     const pushDate = new Date(repo.pushed_at);
     const diffDays = Math.abs(new Date() - pushDate) / (1000 * 60 * 60 * 24);
     const isRecent = diffDays < 2;
@@ -284,7 +282,7 @@ function drawGitHubForest() {
       };
     }
     
-    // --- Dessin Tronc ---
+    // Dessin Tronc
     push();
     translate(0, -h / 2, 0);
     if (isHover) {
@@ -298,7 +296,7 @@ function drawGitHubForest() {
     box(20, h, 20);
     pop();
     
-    // --- Dessin Fleur ---
+    // Dessin Fleur
     push();
     translate(0, -h, 0);
     noStroke();
@@ -310,25 +308,25 @@ function drawGitHubForest() {
       fill(0, 150, 0);
       sphere(isHover ? 15 : 5);
     }
-    pop(); // Fin translation
-    
-    pop(); // Fin arbre global (rotations de base)
+    pop(); 
+    pop(); 
   }
-  pop(); // Fin Forêt
+  pop(); 
   
-  // Assigne à l'état le survol actuel
   state.hoveredRepo = currentHover;
 }
 
 // ============================================================================
-// 5. DECORS ET BACKGROUND
+// 5. DÉCORS ET BACKGROUND
 // ============================================================================
 
 function getGradientColors() {
-  if (!state.weatherData) return { top: color(10, 15, 30), bottom: color(2, 5, 15) };
+  let timeNow = 720; // Midi par défaut
   
-  let cityTime = new Date(Date.now() + (state.weatherData.utc_offset_seconds * 1000));
-  let timeNow = cityTime.getUTCHours() * 60 + cityTime.getUTCMinutes();
+  if (state.weatherData && state.weatherData.utc_offset_seconds !== undefined) {
+    let cityTime = new Date(Date.now() + (state.weatherData.utc_offset_seconds * 1000));
+    timeNow = cityTime.getUTCHours() * 60 + cityTime.getUTCMinutes();
+  }
   
   let c1, c2;
   const night1 = color(10, 15, 30), night2 = color(2, 5, 15);
@@ -373,7 +371,7 @@ function draw3DBackground() {
 }
 
 // ============================================================================
-// 6. GESTION DES EVENEMENTS NAVIGATEUR
+// 6. GESTION DES ÉVÉNEMENTS NAVIGATEUR
 // ============================================================================
 
 function mousePressed() {
