@@ -149,6 +149,7 @@ function setupUI() {
   domElements.uiText.style('font-family', 'sans-serif');
   domElements.uiText.style('font-size', '16px');
   domElements.uiText.style('text-shadow', '1px 1px 2px black');
+  domElements.uiText.style('background', 'rgba(0, 0, 0, 0.23)');
 
   domElements.tooltipDiv = createDiv('');
   domElements.tooltipDiv.style('position', 'absolute');
@@ -170,7 +171,7 @@ function updateUI() {
     cityTimeStr = cityTimeObj.getUTCHours().toString().padStart(2, '0') + "h" + cityTimeObj.getUTCMinutes().toString().padStart(2, '0');
   }
 
-  const act = mic.getLevel() > 0.01 ? "Actif" : "Attente";
+  const act = mic.getLevel() > 0.01 ? "Actif" : "en attente";
   domElements.uiText.html(`📍 ${state.currentCity} | Heure: ${cityTimeStr} | Temp: ${state.temperature}°C | Vent: ${state.windSpeed}km/h | Son: ${act}`);
 
   if (state.hoveredRepo) {
