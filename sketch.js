@@ -1,124 +1,363 @@
-let weatherData, mic;
-let temperature = 0, windSpeed = 0;
-let angle = 0, volume = 0;
-let sunriseTime, sunsetTime;
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
 
-// Ville longiture + latitude open-meteo.com
-const cities = {
+const CONFIG = {
+  GITHUB_USERNAME: "celico7", //votre pseudo ici
+  BASE_RADIUS_MIN: 80,
+  BASE_RADIUS_MAX: 200,
+  AUDIO_PULSE_MAX: 150,
+  ROTATION_SPEED_MIN: 0.2,
+  ROTATION_SPEED_MAX: 3.0,
+  FOREST_RADIUS: 300,
+};
+
+const CITIES_DATA = {
   "Strasbourg": { lat: 48.57, lon: 7.75 },
   "Oberhoffen-sur-Moder": { lat: 48.78, lon: 7.86 },
   "Paris": { lat: 48.85, lon: 2.35 },
   "Tokyo": { lat: 35.67, lon: 139.65 },
   "Reykjavik": { lat: 64.14, lon: -21.89 },
-  "Port Louis": { lat: -20.16, lon: 57.50 }, 
-  "Los Angeles": { lat: 34.05, lon: -118.25 }
+  "Port Louis": { lat: -20.16, lon: 57.50 },
+  "Los Angeles": { lat: 34.05, lon: -118.25 },
 };
 
-let currentCity = "Strasbourg";
-let citySelect;
-let uiText; 
+// ============================================================================
+// VARIABLES D'ÉTAT GLOBALES
+// ============================================================================
+
+let state = {
+  weatherData: null,
+  temperature: 0,
+  windSpeed: 0,
+  sunriseTime: 0,
+  sunsetTime: 0,
+  githubRepos: [],
+  currentCity: "Strasbourg",
+  hoveredRepo: null,
+  angle: 0,
+  volume: 0,
+};
+
+let domElements = {
+  citySelect: null,
+  uiText: null,
+  tooltipDiv: null,
+};
+
+let mic;
+
+// ============================================================================
+// 1. CYCLE DE VIE P5.JS
+// ============================================================================
 
 function preload() {
-  fetchWeather(currentCity);
+  fetchWeather(state.currentCity);
+  fetchGitHub();
 }
 
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
   angleMode(DEGREES);
   colorMode(RGB, 255, 255, 255, 1);
-  
+
+  // Initialisation de l'audio
   mic = new p5.AudioIn();
   mic.start();
-  
-  // Menu déroulant
-  citySelect = createSelect();
-  citySelect.position(20, 20);
-  citySelect.style('background-color', 'rgba(20, 20, 30, 0.8)');
-  citySelect.style('color', '#fff');
-  citySelect.style('border', '1px solid #555');
-  citySelect.style('padding', '8px');
-  citySelect.style('border-radius', '4px');
-  citySelect.style('font-family', 'sans-serif');
-  
-  for (let city in cities) {
-    citySelect.option(city);
-  }
-  citySelect.changed(changeCity);
 
-  uiText = createDiv('');
-  uiText.position(20, windowHeight - 40);
-  uiText.style('color', 'white');
-  uiText.style('font-family', 'sans-serif');
-  uiText.style('font-size', '16px');
-  uiText.style('text-shadow', '1px 1px 2px black');
+  // Création dynamique de l'interface
+  setupUI();
+}
+
+function draw() {
+  background(0);
+  
+  // 1. Fond d'écran
+  draw3DBackground();
+
+  // 2. Mise à jour de la physique et des lumières
+  updateAudioAndAngle();
+  setupLighting();
+
+  // 3. Forêt (les cercles extérieurs)
+  drawGitHubForest();
+
+  // 4. Objet principal
+  drawCentralObject();
+
+  // 5. Interface
+  updateUI();
+}
+
+// ============================================================================
+// 2. RÉCUPÉRATION DES DONNÉES (API)
+// ============================================================================
+
+function fetchWeather(cityName) {
+  const coords = CITIES_DATA[cityName];
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current_weather=true&daily=sunrise,sunset&timezone=auto`;
+  
+  loadJSON(url, (data) => {
+    state.weatherData = data;
+    if (data && data.current_weather) {
+      state.temperature = data.current_weather.temperature;
+      state.windSpeed = data.current_weather.windspeed;
+
+      // Conversion des heures string "YYYY-MM-DDTHH:MM" en "minutes depuis minuit"
+      const srStr = data.daily.sunrise[0];
+      const ssStr = data.daily.sunset[0];
+      state.sunriseTime = parseInt(srStr.substring(11, 13)) * 60 + parseInt(srStr.substring(14, 16));
+      state.sunsetTime = parseInt(ssStr.substring(11, 13)) * 60 + parseInt(ssStr.substring(14, 16));
+    }
+  });
+}
+
+function fetchGitHub() {
+  const url = `https://api.github.com/users/${CONFIG.GITHUB_USERNAME}/repos?sort=updated&per_page=8`;
+  loadJSON(url, (data) => {
+    state.githubRepos = data;
+  });
 }
 
 function changeCity() {
-  currentCity = citySelect.value();
-  fetchWeather(currentCity);
+  state.currentCity = domElements.citySelect.value();
+  fetchWeather(state.currentCity);
 }
 
-function fetchWeather(cityName) {
-  let lat = cities[cityName].lat;
-  let lon = cities[cityName].lon;
-  let url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=sunrise,sunset&timezone=auto`;
-  loadJSON(url, gotWeatherData);
+// ============================================================================
+// 3. CONFIGURATION ET MISE À JOUR DE L'UI
+// ============================================================================
+
+function setupUI() {
+  // Sélecteur de ville
+  domElements.citySelect = createSelect();
+  domElements.citySelect.position(20, 20);
+  domElements.citySelect.style('background-color', 'rgba(20, 20, 30, 0.8)');
+  domElements.citySelect.style('color', '#fff');
+  domElements.citySelect.style('border', '1px solid #555');
+  domElements.citySelect.style('padding', '8px');
+  domElements.citySelect.style('border-radius', '4px');
+  domElements.citySelect.style('font-family', 'sans-serif');
+
+  for (let city in CITIES_DATA) {
+    domElements.citySelect.option(city);
+  }
+  domElements.citySelect.changed(changeCity);
+
+  // Texte du pied de page
+  domElements.uiText = createDiv('');
+  domElements.uiText.position(20, windowHeight - 40);
+  domElements.uiText.style('color', 'white');
+  domElements.uiText.style('font-family', 'sans-serif');
+  domElements.uiText.style('font-size', '16px');
+  domElements.uiText.style('text-shadow', '1px 1px 2px black');
+
+  // Info-bulle pour Github
+  domElements.tooltipDiv = createDiv('');
+  domElements.tooltipDiv.style('position', 'absolute');
+  domElements.tooltipDiv.style('background', 'rgba(0, 0, 0, 0.8)');
+  domElements.tooltipDiv.style('color', 'white');
+  domElements.tooltipDiv.style('padding', '10px');
+  domElements.tooltipDiv.style('border-radius', '5px');
+  domElements.tooltipDiv.style('font-family', 'sans-serif');
+  domElements.tooltipDiv.style('font-size', '14px');
+  domElements.tooltipDiv.style('pointer-events', 'none'); // Ne bloque pas les clics
+  domElements.tooltipDiv.style('display', 'none');
+  domElements.tooltipDiv.style('z-index', '100');
 }
 
-function gotWeatherData(data) {
-  weatherData = data;
-  if (weatherData && weatherData.current_weather) {
-    temperature = weatherData.current_weather.temperature;
-    windSpeed = weatherData.current_weather.windspeed;
+function updateUI() {
+  // Mise à jour des informations de barre de status
+  let cityTimeStr = "--h--";
+  if (state.weatherData && state.weatherData.utc_offset_seconds !== undefined) {
+    let cityTimeObj = new Date(Date.now() + (state.weatherData.utc_offset_seconds * 1000));
+    cityTimeStr = cityTimeObj.getUTCHours().toString().padStart(2, '0') + "h" + cityTimeObj.getUTCMinutes().toString().padStart(2, '0');
+  }
+
+  const act = mic.getLevel() > 0.01 ? "Actif" : "Attente";
+  domElements.uiText.html(`📍 ${state.currentCity} | Heure: ${cityTimeStr} | Temp: ${state.temperature}°C | Vent: ${state.windSpeed}km/h | Son: ${act}`);
+
+  // Affichage du Tooltip Github
+  if (state.hoveredRepo) {
+    // Si la distance est détectée, activer l'info bulle et mettre à jour la position
+    domElements.tooltipDiv.html(`
+      <strong>${state.hoveredRepo.name}</strong><br>
+      <em>${state.hoveredRepo.desc}</em><br>
+      Taille: ${state.hoveredRepo.size} KB<br>
+      ${state.hoveredRepo.isRecent ? "Récent (< 2j)" : "Ancien (> 2j)"}
+    `);
     
-    // Extraire l'heure et la minute de la chaîne et les convertir en "minutes depuis minuit" locales de la ville.
-    let srStr = weatherData.daily.sunrise[0];
-    let ssStr = weatherData.daily.sunset[0];
-    sunriseTime = parseInt(srStr.substring(11, 13)) * 60 + parseInt(srStr.substring(14, 16));
-    sunsetTime = parseInt(ssStr.substring(11, 13)) * 60 + parseInt(ssStr.substring(14, 16));
+    domElements.tooltipDiv.position(mouseX + 15, mouseY + 15); 
+    domElements.tooltipDiv.style('display', 'block');
+  } else {
+    domElements.tooltipDiv.style('display', 'none');
   }
 }
 
-// Calcule les couleurs du ciel selon l'heure
-function getGradientColors() {
-  if (!weatherData) return { top: color(10, 15, 30), bottom: color(2, 5, 15) };
+// ============================================================================
+// 4. MOTEUR 3D
+// ============================================================================
+
+function updateAudioAndAngle() {
+  // Lissage du volume
+  const rawVolume = mic.getLevel();
+  state.volume = lerp(state.volume, rawVolume, 0.1); 
+
+  // Mapping de la vitesse du vent vers de la rotation
+  const rotationSpeed = map(state.windSpeed, 0, 50, CONFIG.ROTATION_SPEED_MIN, CONFIG.ROTATION_SPEED_MAX); 
+  state.angle += rotationSpeed;
+}
+
+function setupLighting() {
+  ambientLight(180);
+  directionalLight(255, 255, 255, 0.5, 0.5, -1);
+}
+
+function drawCentralObject() {
+  const warmColor = color(255, 50, 50);
+  const coldColor = color(50, 150, 255);
   
-  // Heure actuelle en UTC + offset de la ville
-  let cityTime = new Date(Date.now() + (weatherData.utc_offset_seconds * 1000));
-  // Convertie en minutes depuis minuit
+  // Mix entre couleurs
+  const tempAmt = constrain(map(state.temperature, -5, 35, 0, 1), 0, 1);
+  const objColor = lerpColor(coldColor, warmColor, tempAmt);
+  
+  const baseRadius = map(state.temperature, -5, 35, CONFIG.BASE_RADIUS_MIN, CONFIG.BASE_RADIUS_MAX); 
+  const audioPulse = map(state.volume, 0, 0.15, 0, CONFIG.AUDIO_PULSE_MAX); 
+  const finalSize = baseRadius + audioPulse;
+
+  push();
+  rotateX(state.angle * 0.5);
+  rotateY(state.angle);
+  
+  fill(objColor);
+  stroke(255, 255, 255, 0.3); 
+  strokeWeight(1);
+  
+  box(finalSize); 
+  pop();
+}
+
+function drawGitHubForest() {
+  if (!state.githubRepos || state.githubRepos.length === 0) return;
+
+  let currentHover = null;
+  const forestRotationY = frameCount * 0.2;
+
+  push();
+  rotateY(forestRotationY);
+  
+  for (let i = 0; i < state.githubRepos.length; i++) {
+    const repo = state.githubRepos[i];
+    const theta = map(i, 0, state.githubRepos.length, 0, 360);
+    
+    const x = cos(theta) * CONFIG.FOREST_RADIUS;
+    const z = sin(theta) * CONFIG.FOREST_RADIUS;
+    const h = constrain(map(repo.size, 0, 10000, 50, 250), 50, 300);
+    
+    push();
+    translate(x, 0, z);
+    
+    // Logique HOVER via la projection d'écran (screenX / Y)
+    const sx = screenX(0, -h, 0); 
+    const sy = screenY(0, -h, 0);
+    const stx = screenX(0, -h/2, 0);
+    const sty = screenY(0, -h/2, 0);
+
+    // Ajustement de l'origine (p5.js screenX de webgl va de 0 à width ou -width/2... 
+    // Sur des versions récentes dist(mouseX, mouseY) est robuste car screenX renvoie bien le pixel absolu)
+    let isHover = false;
+    if(dist(mouseX, mouseY, sx, sy) < 40 || dist(mouseX, mouseY, stx, sty) < (h/2 + 20)) {
+        isHover = true;
+    }
+
+    // Condition de dates
+    const pushDate = new Date(repo.pushed_at);
+    const diffDays = Math.abs(new Date() - pushDate) / (1000 * 60 * 60 * 24);
+    const isRecent = diffDays < 2;
+
+    if (isHover) {
+      currentHover = {
+        name: repo.name,
+        size: repo.size,
+        isRecent: isRecent,
+        desc: repo.description || "Aucune description"
+      };
+    }
+    
+    // --- Dessin Tronc ---
+    push();
+    translate(0, -h / 2, 0);
+    if (isHover) {
+      fill(150, 255, 150, 0.9);
+      strokeWeight(2);
+    } else {
+      fill(100, 255, 100, 0.5);
+      strokeWeight(1);
+    }
+    stroke(255);
+    box(20, h, 20);
+    pop();
+    
+    // --- Dessin Fleur ---
+    push();
+    translate(0, -h, 0);
+    noStroke();
+    
+    if (isRecent) {
+      fill(255, 20, 147);
+      sphere(isHover ? 30 : 15);
+    } else {
+      fill(0, 150, 0);
+      sphere(isHover ? 15 : 5);
+    }
+    pop(); // Fin translation
+    
+    pop(); // Fin arbre global (rotations de base)
+  }
+  pop(); // Fin Forêt
+  
+  // Assigne à l'état le survol actuel
+  state.hoveredRepo = currentHover;
+}
+
+// ============================================================================
+// 5. DECORS ET BACKGROUND
+// ============================================================================
+
+function getGradientColors() {
+  if (!state.weatherData) return { top: color(10, 15, 30), bottom: color(2, 5, 15) };
+  
+  let cityTime = new Date(Date.now() + (state.weatherData.utc_offset_seconds * 1000));
   let timeNow = cityTime.getUTCHours() * 60 + cityTime.getUTCMinutes();
   
-  let timeSunrise = sunriseTime;
-  let timeSunset = sunsetTime;
-  
   let c1, c2;
-  let night1 = color(10, 15, 30), night2 = color(2, 5, 15);
-  let sunrise1 = color(255, 120, 80), sunrise2 = color(50, 40, 80);
-  let day1 = color(100, 180, 255), day2 = color(240, 250, 255);
-  let sunset1 = color(40, 20, 60), sunset2 = color(255, 80, 50);
-  let oneHour = 60; 
+  const night1 = color(10, 15, 30), night2 = color(2, 5, 15);
+  const sunrise1 = color(255, 120, 80), sunrise2 = color(50, 40, 80);
+  const day1 = color(100, 180, 255), day2 = color(240, 250, 255);
+  const sunset1 = color(40, 20, 60), sunset2 = color(255, 80, 50);
   
-  if (timeNow < timeSunrise - oneHour || timeNow > timeSunset + oneHour) {
+  const oneHour = 60; 
+  
+  if (timeNow < state.sunriseTime - oneHour || timeNow > state.sunsetTime + oneHour) {
     c1 = night1; c2 = night2;
-  } else if (timeNow >= timeSunrise - oneHour && timeNow <= timeSunrise + oneHour) {
-    let amt = map(timeNow, timeSunrise - oneHour, timeSunrise + oneHour, 0, 1);
+  } else if (timeNow >= state.sunriseTime - oneHour && timeNow <= state.sunriseTime + oneHour) {
+    let amt = map(timeNow, state.sunriseTime - oneHour, state.sunriseTime + oneHour, 0, 1);
     c1 = lerpColor(night1, sunrise1, amt);
     c2 = lerpColor(night2, sunrise2, amt);
-  } else if (timeNow > timeSunrise + oneHour && timeNow < timeSunset - oneHour) {
-    let amt = map(timeNow, timeSunrise + oneHour, timeSunrise + oneHour * 3, 0, 1);
+  } else if (timeNow > state.sunriseTime + oneHour && timeNow < state.sunsetTime - oneHour) {
+    let amt = map(timeNow, state.sunriseTime + oneHour, state.sunriseTime + oneHour * 3, 0, 1);
     c1 = lerpColor(sunrise1, day1, constrain(amt, 0, 1));
     c2 = lerpColor(sunrise2, day2, constrain(amt, 0, 1));
-  } else if (timeNow >= timeSunset - oneHour && timeNow <= timeSunset + oneHour) {
-    let amt = map(timeNow, timeSunset - oneHour, timeSunset + oneHour, 0, 1);
+  } else if (timeNow >= state.sunsetTime - oneHour && timeNow <= state.sunsetTime + oneHour) {
+    let amt = map(timeNow, state.sunsetTime - oneHour, state.sunsetTime + oneHour, 0, 1);
     c1 = lerpColor(day1, sunset1, amt);
     c2 = lerpColor(day2, sunset2, amt);
   }
   return { top: c1, bottom: c2 };
 }
 
-// Dessine un mur au fond de la scène 3D pour faire le ciel
 function draw3DBackground() {
-  let colors = getGradientColors();
+  const colors = getGradientColors();
   push();
   translate(0, 0, -800);
   noStroke();
@@ -133,59 +372,9 @@ function draw3DBackground() {
   pop();
 }
 
-function draw() {
-  background(0);
-  draw3DBackground();
-  
-  // son
-  let rawVolume = mic.getLevel(); 
-  
-  volume = lerp(volume, rawVolume, 0.1); 
-
-  // LUMIÈRES
-  ambientLight(180);
-  directionalLight(255, 255, 255, 0.5, 0.5, -1);
-  
-  // COULEURS TEMPERATURE
-  let warmColor = color(255, 50, 50);
-  let coldColor = color(50, 150, 255);
-  let tempAmt = constrain(map(temperature, -5, 35, 0, 1), 0, 1);
-  let objColor = lerpColor(coldColor, warmColor, tempAmt);
-  
-  // ANIMATION
-  let rotationSpeed = map(windSpeed, 0, 50, 0.2, 3); 
-  angle += rotationSpeed;
-  
-  // TAILLES 
-  let baseRadius = map(temperature, -5, 35, 80, 200); 
-  // La pulsation réagit maintenant très fort au moindre bruit !
-  let audioPulse = map(volume, 0, 0.15, 0, 150); 
-  
-  // OBJET
-  push();
-  rotateX(angle * 0.5);
-  rotateY(angle);
-  
-  fill(objColor);
-
-  stroke(255, 255, 255, 0.3); 
-  strokeWeight(1);
-  
-  // FORME :
-  let finalSize = baseRadius + audioPulse;
-  box(finalSize, finalSize, finalSize); 
-  
-  pop();
-
-  // Mise à jour du texte UI avec l'heure locale exacte
-  let cityTimeStr = "--h--";
-  if (weatherData) {
-    let cityTimeObj = new Date(Date.now() + (weatherData.utc_offset_seconds * 1000));
-    cityTimeStr = cityTimeObj.getUTCHours().toString().padStart(2, '0') + "h" + cityTimeObj.getUTCMinutes().toString().padStart(2, '0');
-  }
-
-  uiText.html(`📍 ${currentCity} | Heure locale: ${cityTimeStr} | Temp: ${temperature}°C | Vent: ${windSpeed}km/h | Son: ${mic.getLevel() > 0.01 ? "Actif 🎤" : "Attente"}`);
-}
+// ============================================================================
+// 6. GESTION DES EVENEMENTS NAVIGATEUR
+// ============================================================================
 
 function mousePressed() {
   userStartAudio(); 
@@ -193,5 +382,5 @@ function mousePressed() {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-  uiText.position(20, windowHeight - 40); 
+  if(domElements.uiText) domElements.uiText.position(20, windowHeight - 40); 
 }

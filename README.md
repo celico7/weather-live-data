@@ -10,6 +10,13 @@ A 3D interactive web experiment built with p5.js. This project creates a generat
 *   **Timezone-Aware Backgrounds**: The 3D scene background dynamically transitions through dawn, day, dusk, and night gradients. It calculates the exact local time and compares it to the sunrise and sunset times of the selected city.
 *   **Audio Reactivity**: The central 3D geometry pulses and expands in real-time based on live environmental audio captured via the microphone.
 *   **City Selector**: Seamlessly jump between different global locations (e.g., Strasbourg, Tokyo, Los Angeles) to watch the ecosystem instantly adapt to new local weather conditions and timezones.
+*   **GitHub Forest**: An orbital 3D forest representing your recent GitHub repositories! Hover over the trees (trunks or glowing spheres) to see repository details like name, description, size, and recent activity status.
+
+## Privacy & Data Promise
+
+**No data is recorded, stored, or transmitted.** 
+* The microphone input is processed purely locally in real-time within your browser to animate the 3D shapes.
+* The weather and GitHub data are fetched directly from public APIs to your local machine. Nothing is tracked on any database.
 
 ## Technologies Used
 
@@ -62,6 +69,13 @@ Une expérience web interactive en 3D construite avec p5.js. Ce projet crée une
 *   **Fonds d'écran Adaptatifs (Fuseaux Horaires)** : L'arrière-plan de la scène 3D transite dynamiquement entre l'aube, le jour, le crépuscule et la nuit. Il calcule l'heure locale exacte et la compare aux heures de lever et de coucher du soleil de la ville sélectionnée.
 *   **Réactivité Audio** : La géométrie 3D centrale pulse et s'agrandit en temps réel en fonction du son capté via le microphone.
 *   **Sélecteur de Villes** : Basculez facilement entre différentes villes du monde (ex: Strasbourg, Tokyo, Los Angeles) pour voir l'écosystème s'adapter instantanément à la météo et à l'heure locale.
+*   **Forêt GitHub 3D** : Une forêt orbitale représentant vos dépôts GitHub récents ! Survolez les arbres (les troncs ou les fleurs au sommet) avec votre souris pour afficher une info-bulle contenant le nom du projet, sa description, sa taille et un indicateur de mise à jour récente.
+
+## Confidentialité & Traitement des Données
+
+**Aucune donnée n'est enregistrée, conservée ou transmise.**
+* Le flux audio de votre microphone est traité localelement et en temps réel uniquement par votre navigateur pour animer la géométrie 3D.
+* Les données météorologiques et celles de vos dépôts GitHub sont simplement récupérées depuis des API publiques de la machine sans aucun traçage en arrière-plan ni base de données.
 
 ## Technologies Utilisées
 
