@@ -27,6 +27,9 @@ const LANG_COLORS: Record<string, string> = {
 
 const FOREST_RADIUS = 500;
 
+let globalMic: any = null;
+let globalFft: any = null;
+
 export const DigitalEcosystem: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [cities, setCities] = useState(() => {
@@ -126,13 +129,19 @@ export const DigitalEcosystem: React.FC = () => {
     }
   }, [cityIndex, isStarted, cities]);
 
-  const handleStart = () => {
-    setIsStarted(true);
-    if ((window as any).p5 && (window as any).p5.prototype.getAudioContext) {
-      (window as any).p5.prototype.getAudioContext().resume();
-    } else if ((window as any).getAudioContext) {
-      (window as any).getAudioContext().resume();
+  const handleStart = async () => {
+    try {
+      const getAudioContext = (window as any).getAudioContext || ((window as any).p5 && (window as any).p5.prototype.getAudioContext);
+      if (getAudioContext) {
+        const ctx = getAudioContext();
+        if (ctx && ctx.state === 'suspended') {
+          await ctx.resume();
+        }
+      }
+    } catch (e) {
+      console.warn("Audio initialization failed", e);
     }
+    setIsStarted(true);
   };
 
   const searchCities = async (query: string) => {
@@ -194,21 +203,32 @@ export const DigitalEcosystem: React.FC = () => {
 
     const state = stateRef.current;
 
-    let mic: any, fft: any;
     let myP5: any;
 
     const sketch = (p: any) => {
       p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL).parent(containerRef.current!);
         
+        // Initialize global audio inside the p5 sketch to ensure AudioWorklet scope is valid
         try {
-          mic = new (window as any).p5.AudioIn();
-          mic.start(
-            () => console.log("Microphone successfully started"),
-            (err: any) => console.error("Microphone access denied or error:", err)
-          );
-          fft = new (window as any).p5.FFT(0.8, 64);
-          fft.setInput(mic);
+          if (!globalMic) {
+            // Wait a tiny bit for the AudioContext to be fully active before creating worklets
+            setTimeout(() => {
+              try {
+                if (!globalMic) {
+                  globalMic = new (window as any).p5.AudioIn();
+                  globalMic.start(
+                    () => console.log("Microphone access granted & started"),
+                    (err: any) => console.error("Microphone access denied:", err)
+                  );
+                  globalFft = new (window as any).p5.FFT(0.8, 64);
+                  globalFft.setInput(globalMic);
+                }
+              } catch(e) {
+                console.error("Audio init delayed error", e);
+              }
+            }, 100);
+          }
         } catch (err) {
           console.error("Audio init error", err);
         }
@@ -262,11 +282,11 @@ export const DigitalEcosystem: React.FC = () => {
         p.orbitControl(2, 2, 0.5); // Enable smooth zoom and pan
 
         try {
-          if (fft && mic) {
-            const spectrumData = fft.analyze();
-            const b = fft.getEnergy("bass");
-            const t = fft.getEnergy("treble");
-            const l = mic.getLevel();
+          if (globalFft && globalMic) {
+            const spectrumData = globalFft.analyze();
+            const b = globalFft.getEnergy("bass");
+            const t = globalFft.getEnergy("treble");
+            const l = globalMic.getLevel();
 
             // Reduce sensitivity by applying a small threshold and scaling
             let rawBass = (typeof b === 'number' && !isNaN(b) ? b : 0) / 255;
@@ -461,8 +481,17 @@ export const DigitalEcosystem: React.FC = () => {
       p.mousePressed = (e?: any) => {
         if (e && e.target && (e.target as HTMLElement).tagName !== 'CANVAS') return;
         state.clickStartTime = p.millis();
-        if ((window as any).getAudioContext) {
-          (window as any).getAudioContext().resume();
+        
+        try {
+          const getAudioContext = (window as any).getAudioContext || ((window as any).p5 && (window as any).p5.prototype.getAudioContext);
+          if (getAudioContext) {
+            const ctx = getAudioContext();
+            if (ctx && ctx.state === 'suspended') {
+              ctx.resume();
+            }
+          }
+        } catch(err) {
+          // ignore
         }
       };
 
@@ -484,10 +513,6 @@ export const DigitalEcosystem: React.FC = () => {
     myP5 = new (window as any).p5(sketch);
 
     return () => {
-      if (mic) {
-        mic.stop();
-        mic.dispose();
-      }
       myP5.remove();
     };
   }, [isStarted]); // Removed cityIndex from dependencies
