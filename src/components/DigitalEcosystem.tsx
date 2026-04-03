@@ -43,6 +43,7 @@ export const DigitalEcosystem: React.FC = () => {
   const [isAddCityOpen, setIsAddCityOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [githubUser, setGithubUser] = useState('celico7');
   const [isSearching, setIsSearching] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -351,8 +352,29 @@ export const DigitalEcosystem: React.FC = () => {
           </button>
         </div>
 
-        {/* Cities List */}
-        <div className="flex flex-wrap max-w-xl gap-2 items-center">
+        <div className="flex flex-wrap max-w-xl gap-2 items-center mt-6">
+          <div className="relative group flex items-center pr-4 border-r border-white/10">
+            <div className="absolute -top-5 left-3 text-[9px] uppercase tracking-widest text-theme-primary/80 font-bold whitespace-nowrap">
+              User: {githubUser}
+            </div>
+            <Github size={14} className="text-white/40 absolute left-3" />
+            <input
+               type="text"
+               placeholder="Search User..."
+               onKeyDown={(e) => {
+                 if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                   const newUser = e.currentTarget.value.trim();
+                   setGithubUser(newUser);
+                   stateRef.current.targetGithubUser = newUser;
+                   stateRef.current.repos = [];
+                   stateRef.current.isFetchingRepos = false;
+                   e.currentTarget.value = '';
+                 }
+               }}
+               className="bg-[#1A1A1A]/60 text-[9px] uppercase tracking-[0.2em] font-normal text-white placeholder:text-white/30 border border-white/10 rounded-full py-2 pl-9 pr-4 w-40 focus:outline-none focus:border-theme-primary transition-all duration-300"
+            />
+          </div>
+
           {cities.map((city, idx) => (
             <div key={`${city.name}-${idx}`} className="relative group">
               <button
