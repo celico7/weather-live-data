@@ -51,6 +51,8 @@ export const DigitalEcosystem: React.FC = () => {
     weather: { temp: 15, wind: 5, code: 0, isDay: true, desc: "Ciel dégagé", hour: 12 },
     audio: { bass: 0, treble: 0, level: 0, smoothedBass: 0 },
     repos: [] as any[],
+    targetGithubUser: '',
+    isFetchingRepos: false,
     hoveredRepo: -1,
     particles: [] as any[],
     rotation: { x: 0, y: 0 },
@@ -154,7 +156,7 @@ export const DigitalEcosystem: React.FC = () => {
       timezone: cityData.timezone || "UTC",
       country: cityData.country || "Unknown"
     };
-    setCities(prev => [...prev, newCity]);
+    setCities((prev: any) => [...prev, newCity]);
     setCityIndex(cities.length); // Select the new city
     setIsAddCityOpen(false);
     setSearchQuery('');
@@ -163,7 +165,7 @@ export const DigitalEcosystem: React.FC = () => {
 
   const removeCity = (indexToRemove: number) => {
     if (cities.length <= 1) return;
-    setCities(prev => prev.filter((_, i) => i !== indexToRemove));
+    setCities((prev: any[]) => prev.filter((_: any, i: number) => i !== indexToRemove));
     if (cityIndex >= indexToRemove && cityIndex > 0) {
       setCityIndex(prev => prev - 1);
     }
@@ -375,7 +377,7 @@ export const DigitalEcosystem: React.FC = () => {
             />
           </div>
 
-          {cities.map((city, idx) => (
+          {cities.map((city: any, idx: number) => (
             <div key={`${city.name}-${idx}`} className="relative group">
               <button
                 onClick={() => setCityIndex(idx)}

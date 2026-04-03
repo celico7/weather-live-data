@@ -120,7 +120,10 @@ export const createEcosystemSketch = (
           state.audio.treble = (typeof t === 'number' && !isNaN(t) ? t : 0) / 255;
           state.audio.level = (typeof l === 'number' && !isNaN(l) ? l : 0);
           
-          state.audio.smoothedBass = p.lerp(state.audio.smoothedBass, state.audio.bass, 0.05);
+          // Smoother transitions to avoid jerky visuals
+          state.audio.smoothedBass = p.lerp(state.audio.smoothedBass || 0, state.audio.bass, 0.15);
+          state.audio.smoothedTreble = p.lerp(state.audio.smoothedTreble || 0, state.audio.treble, 0.15);
+          state.audio.smoothedLevel = p.lerp(state.audio.smoothedLevel || 0, state.audio.level, 0.15);
 
           if (p.frameCount % 5 === 0) {
             const simplified = [];
@@ -135,7 +138,7 @@ export const createEcosystemSketch = (
     }
 
     const setupDynamicLighting = (p: p5) => {
-      p.ambientLight(40, 40, 40);
+      p.ambientLight(80, 80, 80); // Increased ambient for softer baseline
       
       const hour = state.weather.hour;
       const sunAngle = p.map(hour, 6, 18, 0, p.PI, true);
@@ -143,21 +146,25 @@ export const createEcosystemSketch = (
       const sunDirY = -p.sin(sunAngle); 
       const sunDirZ = -0.5;
       
-      let lightColor = p.color(255, 255, 255);
-      if (hour >= 17 || hour <= 7) lightColor = p.color(255, 120, 50);
-      if (state.weather.code >= 95) lightColor = p.color(100, 150, 255);
+      // Reduced directional light intensity to prevent washing out colors
+      let lightColor = p.color(150, 150, 150);
+      if (hour >= 17 || hour <= 7) lightColor = p.color(120, 60, 30);
+      if (state.weather.code >= 95) lightColor = p.color(50, 75, 120);
 
       p.directionalLight(lightColor, sunDirX, sunDirY, sunDirZ);
       
-      p.pointLight(state.audio.bass * 255, state.audio.bass * 100, state.audio.bass * 255, 0, 0, 0);
+      const sBass = state.audio.smoothedBass || 0;
+      p.pointLight(sBass * 255, sBass * 100, sBass * 255, 0, 0, 0);
     }
 
     const drawTerrain = (p: p5) => {
       p.push();
+      // Temporarily use HSB color mode for rainbow effects
+      p.colorMode(p.HSB, 360, 100, 100, 255);
+      
       p.translate(0, 200, 0);
       p.rotateX(p.PI / 2);
       p.noFill();
-      p.stroke(0, 255, 200, 30 + state.audio.bass * 70);
       p.strokeWeight(1);
       
       const cols = 25;
@@ -170,17 +177,32 @@ export const createEcosystemSketch = (
       
       const flying = p.frameCount * (0.01 + state.weather.wind * 0.001);
       
+      const sBass = state.audio.smoothedBass || 0;
+      
       for (let y = 0; y < rows - 1; y++) {
         p.beginShape(p.TRIANGLE_STRIP);
         for (let x = 0; x < cols; x++) {
-          const z1 = p.map(p.noise(x * 0.1, (y - flying) * 0.1), 0, 1, -50, 150) + (Math.sin(x*0.5 + p.frameCount*0.1) * state.audio.bass * 50);
+          const z1 = p.map(p.noise(x * 0.1, (y - flying) * 0.1), 0, 1, -50, 150) + (Math.sin(x*0.5 + p.frameCount*0.1) * sBass * 50);
+          
+          // Neutral color (white) when no bass, transitions to rainbow when bass > 0
+          const currentSat = Math.min(100, Math.max(0, sBass * 300));
+          
+          // Dynamic rainbow wave reacting to sound and time
+          const hue1 = (x * 10 + y * 10 - p.frameCount * 2) % 360;
+          p.stroke(hue1 >= 0 ? hue1 : hue1 + 360, currentSat, 100, 50 + sBass * 200);
           p.vertex(x * scl, y * scl, z1);
           
-          const z2 = p.map(p.noise(x * 0.1, (y + 1 - flying) * 0.1), 0, 1, -50, 150) + (Math.sin(x*0.5 + p.frameCount*0.1) * state.audio.bass * 50);
+          const z2 = p.map(p.noise(x * 0.1, (y + 1 - flying) * 0.1), 0, 1, -50, 150) + (Math.sin(x*0.5 + p.frameCount*0.1) * sBass * 50);
+          
+          const hue2 = (x * 10 + (y + 1) * 10 - p.frameCount * 2) % 360;
+          p.stroke(hue2 >= 0 ? hue2 : hue2 + 360, currentSat, 100, 50 + sBass * 200);
           p.vertex(x * scl, (y + 1) * scl, z2);
         }
         p.endShape();
       }
+      
+      // Revert back to standard RGB color mode immediately
+      p.colorMode(p.RGB, 255);
       p.pop();
     };
 
@@ -203,13 +225,12 @@ export const createEcosystemSketch = (
 
     const drawCentralObject = (p: p5) => {
       p.push();
-      const cold = p.color(100, 200, 255);
-      const hot = p.color(255, 100, 50);
-      const tempCol = p.lerpColor(cold, hot, p.map(state.weather.temp, 0, 35, 0, 1));
+      const cold = p.color(50, 150, 255); // Frosty blue
+      const hot = p.color(255, 80, 50);   // Fire red
       
-      p.ambientMaterial(tempCol);
-      p.stroke(255, 150);
-      p.strokeWeight(0.5);
+      // Calculate normalized temp (-10C to 40C) and constrain between 0 and 1
+      const normalizedTemp = p.constrain(p.map(state.weather.temp, -10, 40, 0, 1), 0, 1);
+      const tempCol = p.lerpColor(cold, hot, normalizedTemp);
       
       p.rotateX(p.frameCount * 0.01);
       p.rotateY(p.frameCount * 0.015);
@@ -217,15 +238,16 @@ export const createEcosystemSketch = (
       const pulse = 1.0 + state.audio.smoothedBass * 0.35; 
       p.scale(pulse);
       
-      // Ensure the box gets the temperature color with ambient mapping
-      p.ambientMaterial(tempCol);
+      // Fill the box exclusively with the temperature color
+      p.fill(tempCol);
+      p.noStroke();
       p.box(100);
 
       // Wireframe globe as requested (like in the image)
       p.noFill();
       p.stroke(255, 150);
       p.strokeWeight(0.5);
-      p.sphere(70 + state.audio.treble * 60);
+      p.sphere(70 + (state.audio.smoothedTreble || 0) * 60);
       p.pop();
     };
 
@@ -266,7 +288,7 @@ export const createEcosystemSketch = (
     };
 
     const recursiveBranch = (p: p5, len: number, depth: number, maxDepth: number, leafColor: p5.Color) => {
-      const audioPulse = 1.0 + state.audio.bass * 0.3;
+      const audioPulse = 1.0 + (state.audio.smoothedBass || 0) * 0.3;
       const dynamicLen = depth === 0 ? len * audioPulse : len;
 
       p.strokeWeight(p.map(depth, 0, maxDepth, 4, 0.5));
@@ -277,7 +299,7 @@ export const createEcosystemSketch = (
         p.push();
         p.noStroke();
         p.fill(leafColor);
-        p.scale(1 + state.audio.treble * 2);
+        p.scale(1 + (state.audio.smoothedTreble || 0) * 2);
         p.rotateX(p.frameCount * 0.05);
         p.box(10);
         p.pop();
@@ -287,10 +309,10 @@ export const createEcosystemSketch = (
         for (let i = 0; i < 2; i++) {
           p.push();
           const windEff = p.sin(p.frameCount * 0.03 + depth) * (state.weather.wind * 0.01);
-          const audioEff = state.audio.treble * 0.3 * (i === 0 ? 1 : -1);
+          const audioEff = (state.audio.smoothedTreble || 0) * 0.3 * (i === 0 ? 1 : -1);
           
           p.rotateZ(0.4 * (i === 0 ? 1 : -1) + windEff + audioEff);
-          p.rotateY(p.frameCount * 0.01 + state.audio.level * 0.5);
+          p.rotateY(p.frameCount * 0.01 + (state.audio.smoothedLevel || 0) * 0.5);
           recursiveBranch(p, len * 0.75, depth + 1, maxDepth, leafColor);
           p.pop();
         }
