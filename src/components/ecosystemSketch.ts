@@ -13,6 +13,9 @@ export const createEcosystemSketch = (
   return (p: p5) => {
     const state = stateRef.current;
 
+    let navMode = 'mouse';
+    let activeIndex = -1;
+
     p.setup = () => {
       p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
       
@@ -30,6 +33,17 @@ export const createEcosystemSketch = (
           }, 100);
         }
       } catch (err) {}
+
+      p.keyPressed = () => {
+        if (state.repos.length === 0) return;
+        if (p.keyCode === p.LEFT_ARROW) {
+          navMode = 'keyboard';
+          activeIndex = activeIndex <= 0 ? state.repos.length - 1 : activeIndex - 1;
+        } else if (p.keyCode === p.RIGHT_ARROW) {
+          navMode = 'keyboard';
+          activeIndex = activeIndex >= state.repos.length - 1 ? 0 : activeIndex + 1;
+        }
+      };
 
       for (let i = 0; i < 300; i++) {
         if (state.particles.length < 300) {
@@ -59,25 +73,31 @@ export const createEcosystemSketch = (
       drawWeatherParticles(p);
       drawCentralObject(p);
       
-      let hoveredIndex = -1;
-      let minD = 150; 
-      state.repos.forEach((repo: any, i: number) => {
-        const x = p.cos(repo.angle) * FOREST_RADIUS;
-        const z = p.sin(repo.angle) * FOREST_RADIUS;
-        const trunkHeight = p.map(repo.size, 0, 10000, 40, 180, true);
-        const y = -trunkHeight / 2; 
-        
-        const pos2D = project(p, x, y, z);
-        const d = p.dist(p.mouseX, p.mouseY, pos2D.x + p.width/2, pos2D.y + p.height/2);
-        if (d < minD) { minD = d; hoveredIndex = i; }
-      });
+      // Check if mouse actually moved to switch back to mouse nav
+      const dMouse = p.dist(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY);
+      if (dMouse > 2) navMode = 'mouse';
       
-      if (state.hoveredRepo !== hoveredIndex) {
-        state.hoveredRepo = hoveredIndex;
-        setHoveredRepoData(hoveredIndex !== -1 ? state.repos[hoveredIndex] : null);
+      if (navMode === 'mouse') {
+        let minD = 150; 
+        activeIndex = -1;
+        state.repos.forEach((repo: any, i: number) => {
+          const x = p.cos(repo.angle) * FOREST_RADIUS;
+          const z = p.sin(repo.angle) * FOREST_RADIUS;
+          const trunkHeight = p.map(repo.size, 0, 10000, 40, 180, true);
+          const y = -trunkHeight / 2; 
+          
+          const pos2D = project(p, x, y, z);
+          const d = p.dist(p.mouseX, p.mouseY, pos2D.x + p.width/2, pos2D.y + p.height/2);
+          if (d < minD) { minD = d; activeIndex = i; }
+        });
+      }
+      
+      if (state.hoveredRepo !== activeIndex) {
+        state.hoveredRepo = activeIndex;
+        setHoveredRepoData(activeIndex !== -1 ? state.repos[activeIndex] : null);
       }
 
-      drawGitHubForest(p, hoveredIndex);
+      drawGitHubForest(p, activeIndex);
     };
 
     const fetchGitHub = async (user: string) => {
@@ -93,10 +113,40 @@ export const createEcosystemSketch = (
             size: repo.size,
             url: repo.html_url,
             stars: repo.stargazers_count,
+            commits: '...', // Default before fetching
             angle: (p.TWO_PI / Math.min(data.length, 10)) * index,
             scale: 0.4,
             targetScale: 1.0
           }));
+          
+          // Asynchronously fetch commits count to avoid blocking
+          state.repos.forEach(async (repo: any, i: number) => {
+            try {
+              const commitRes = await fetch(`https://api.github.com/repos/${user}/${repo.name}/commits?per_page=1`);
+              const linkHeader = commitRes.headers.get('link');
+              if (linkHeader) {
+                const match = linkHeader.match(/page=(\d+)>; rel="last"/);
+                if (match) {
+                  state.repos[i].commits = match[1];
+                  // Trigger state update for React if this is the hovered one
+                  if (state.hoveredRepo === i) {
+                    setHoveredRepoData({...state.repos[i]});
+                  }
+                  return;
+                }
+              }
+              // If no link header, there's only 1 page (or 0 commits if empty, but usually at least 1)
+              const commitsData = await commitRes.json();
+              if (Array.isArray(commitsData)) {
+                state.repos[i].commits = commitsData.length.toString();
+                if (state.hoveredRepo === i) {
+                  setHoveredRepoData({...state.repos[i]});
+                }
+              }
+            } catch (e) {
+              state.repos[i].commits = "N/A";
+            }
+          });
         } else {
           state.repos = [];
         }

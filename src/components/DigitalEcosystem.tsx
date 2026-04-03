@@ -314,9 +314,16 @@ export const DigitalEcosystem: React.FC = () => {
                 <span className="text-white/50 uppercase tracking-widest font-bold">{t.repoSize}</span>
                 <span className="text-white/90 font-mono font-bold">{hoveredRepoData.size} KB</span>
               </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-white/50 uppercase tracking-widest font-bold">{t.repoCommits}</span>
+                <span className="text-white/90 font-mono font-bold">{hoveredRepoData.commits || '...'}</span>
+              </div>
               <a href={hoveredRepoData.url} target="_blank" rel="noreferrer" className="mt-4 block w-full py-2 text-center text-[10px] uppercase tracking-[0.2em] text-white/80 font-bold bg-[#1A1A1A] hover:bg-theme-primary/40 rounded transition-colors border border-theme-primary/30 pointer-events-auto">
                 {t.viewRepo}
               </a>
+              <div className="text-center pt-2 text-[#ffffff40] text-[9px] uppercase tracking-widest font-bold">
+                {t.keyboardNav}
+              </div>
             </div>
           </div>
         )}
