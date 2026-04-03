@@ -3,9 +3,9 @@ export type Language = 'fr' | 'en';
 export const TRANSLATIONS = {
   fr: {
     subtitle: "Météo • Audio • GitHub • Procédural",
-    point1: "Un écosystème 3D interactif qui respire et réagit à votre voix.",
+    point1: "Un écosystème 3D interactif qui réagit au son detecté.",
     point2: "Synchronisé en temps réel avec la météo de la ville choisie (heure, pluie...).",
-    point3: "Explorez n'importe quel profil GitHub sous forme de forêt procédurale (par défaut : celico7).",
+    point3: "Explorez n'importe quel profil GitHub sous forme de forêt (par défaut : celico7).",
     initBtn: "Initialiser l'écosystème",
     repoLanguage: "Langage",
     repoSize: "Taille",
@@ -30,9 +30,9 @@ export const TRANSLATIONS = {
   },
   en: {
     subtitle: "Weather • Audio • GitHub • Procedural",
-    point1: "An interactive 3D ecosystem that breathes and reacts to your voice.",
+    point1: "An interactive 3D ecosystem that reacts to detected audio.",
     point2: "Synchronized in real-time with the chosen city's weather (time, rain...).",
-    point3: "Explore any GitHub profile as a procedural forest (default: celico7).",
+    point3: "Explore any GitHub profile as a forest (default: celico7).",
     initBtn: "Initialize Ecosystem",
     repoLanguage: "Language",
     repoSize: "Size",
