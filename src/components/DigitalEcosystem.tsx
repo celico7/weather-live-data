@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Settings, Plus, Upload, User, X, Search } from 'lucide-react';
+import { Settings, Plus, Upload, User, X, Search, Home, Github } from 'lucide-react';
 
 // --- CONFIG & CITIES_DATA ---
 const CITIES_DATA: Record<string, { lat: number, lon: number, timezone: string, country: string }> = {
@@ -550,6 +550,20 @@ export const DigitalEcosystem: React.FC = () => {
             <p className="text-[10px] md:text-xs font-bold tracking-[0.8em] uppercase text-theme-primary/70 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
               Weather • Audio • GitHub • Procedural
             </p>
+            <ul className="text-left text-xs md:text-sm text-white/70 tracking-wider space-y-3 max-w-lg mx-auto !mt-12 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-[400ms]">
+              <li className="flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-theme-primary shadow-[0_0_8px_var(--theme-primary)]" />
+                Un écosystème 3D interactif qui réagit au son detecté.
+              </li>
+              <li className="flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-theme-primary shadow-[0_0_8px_var(--theme-primary)]" />
+                Synchronisé en temps réel avec la météo de la ville choisie (heure, pluie...).
+              </li>
+              <li className="flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-theme-primary shadow-[0_0_8px_var(--theme-primary)]" />
+                Explorez n'importe quel profil GitHub sous forme de forêt procédurale (par défaut : celico7).
+              </li>
+            </ul>
           </div>
           
           <button
@@ -562,6 +576,17 @@ export const DigitalEcosystem: React.FC = () => {
               Initialiser l'écosystème
             </span>
           </button>
+
+          {/* Credits */}
+          <a
+            href="https://github.com/celico7"
+            target="_blank"
+            rel="noreferrer"
+            className="absolute bottom-8 right-8 z-20 flex items-center gap-2 text-white/50 hover:text-theme-primary transition-colors duration-300 text-xs uppercase tracking-widest font-bold group animate-in fade-in duration-1000 delay-700"
+          >
+            <Github size={16} className="group-hover:scale-110 transition-transform" />
+            <span>© 2026 celico7</span>
+          </a>
         </div>
       )}
 
@@ -609,8 +634,16 @@ export const DigitalEcosystem: React.FC = () => {
 
       {/* Bottom Left Controls: Cities & Settings */}
       <div className="absolute bottom-12 left-12 z-10 flex flex-col gap-4">
-        {/* Settings & Avatar Button */}
+        {/* Settings, Avatar & Home Button */}
         <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsStarted(false)}
+            className="w-12 h-12 rounded-full bg-[#1A1A1A]/80 backdrop-blur-md border border-theme-primary/30 flex items-center justify-center text-white/80 hover:text-theme-primary hover:border-theme-primary transition-all duration-300 shadow-lg group"
+            title="Retour à l'accueil"
+          >
+            <Home size={20} className="group-hover:scale-110 transition-transform" />
+          </button>
+
           <button 
             onClick={() => setIsSettingsOpen(true)}
             className="w-12 h-12 rounded-full bg-[#1A1A1A]/80 backdrop-blur-md border border-theme-primary/30 flex items-center justify-center text-white/80 hover:text-theme-primary hover:border-theme-primary transition-all duration-300 shadow-lg overflow-hidden"
