@@ -221,9 +221,10 @@ export const createEcosystemSketch = (
       p.ambientMaterial(tempCol);
       p.box(100);
 
-      // Transparent globe as requested
-      p.fill(255, 50);
-      p.noStroke(); // Optional, looks cleaner inside the box
+      // Wireframe globe as requested (like in the image)
+      p.noFill();
+      p.stroke(255, 150);
+      p.strokeWeight(0.5);
       p.sphere(70 + state.audio.treble * 60);
       p.pop();
     };
