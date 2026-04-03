@@ -44,9 +44,13 @@ export const createEcosystemSketch = (
     };
 
     p.draw = () => {
-      const isStorm = state.weather.code >= 95;
-      if (isStorm && p.random(1) < 0.02) p.background(255);
-      else p.clear(); 
+      // Fetch GitHub repos if needed
+      if (state.repos.length === 0 && !state.isFetchingRepos) {
+        state.isFetchingRepos = true;
+        fetchGitHub(state.targetGithubUser || 'celico7');
+      }
+
+      p.clear(); 
 
       p.orbitControl(2, 2, 0.5);
       updateAudio(p);
@@ -74,6 +78,31 @@ export const createEcosystemSketch = (
       }
 
       drawGitHubForest(p, hoveredIndex);
+    };
+
+    const fetchGitHub = async (user: string) => {
+      try {
+        const res = await fetch(`https://api.github.com/users/${user}/repos?sort=updated&per_page=10`);
+        if (res.status === 403) throw new Error("Rate limit");
+        const data = await res.json();
+        
+        if (Array.isArray(data)) {
+          state.repos = data.map((repo: any, index: number) => ({
+            name: repo.name,
+            lang: repo.language || 'default',
+            size: repo.size,
+            url: repo.html_url,
+            stars: repo.stargazers_count,
+            angle: (p.TWO_PI / Math.min(data.length, 10)) * index,
+            scale: 0.4,
+            targetScale: 1.0
+          }));
+        } else {
+          state.repos = [];
+        }
+      } catch (err) {
+        state.repos = [];
+      }
     };
 
     const updateAudio = (p: p5) => {
