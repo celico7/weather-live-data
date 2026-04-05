@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Settings, Plus, Upload, User, X, Search, Home, Github, Globe } from 'lucide-react';
+import { Settings, Plus, Upload, User, X, Search, Home, Github, Globe, Maximize, Minimize } from 'lucide-react';
 import { TRANSLATIONS, CITIES, LANG_COLORS, FOREST_RADIUS, Language } from '../config';
 import { createEcosystemSketch } from './ecosystemSketch';
 
@@ -46,6 +46,25 @@ export const DigitalEcosystem: React.FC = () => {
   const [githubUser, setGithubUser] = useState('celico7');
   const [isSearching, setIsSearching] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   const stateRef = useRef({
     weather: { temp: 15, wind: 5, code: 0, isDay: true, desc: "Ciel dégagé", hour: 12 },
@@ -331,7 +350,7 @@ export const DigitalEcosystem: React.FC = () => {
 
       {/* Bottom Left Controls: Cities & Settings */}
       <div className="absolute bottom-12 left-12 z-10 flex flex-col gap-4">
-        {/* Settings, Avatar, Home & Language Button */}
+        {/* Settings, Avatar, Home, Fullscreen & Language Button */}
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setIsStarted(false)}
@@ -339,6 +358,14 @@ export const DigitalEcosystem: React.FC = () => {
             title={t.backHome}
           >
             <Home size={20} className="group-hover:scale-110 transition-transform" />
+          </button>
+
+          <button 
+            onClick={toggleFullscreen}
+            className="w-12 h-12 rounded-full bg-[#1A1A1A]/80 backdrop-blur-md border border-theme-primary/30 flex items-center justify-center text-white/80 hover:text-theme-primary hover:border-theme-primary transition-all duration-300 shadow-lg group"
+            title="Fullscreen"
+          >
+            {isFullscreen ? <Minimize size={20} className="group-hover:scale-110 transition-transform" /> : <Maximize size={20} className="group-hover:scale-110 transition-transform" />}
           </button>
 
           <button 
